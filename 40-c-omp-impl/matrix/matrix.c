@@ -77,7 +77,7 @@ void sub_matrix_mul(matrix_mult_operation* mul_op, sub_matrix_meta* A, sub_matri
                 float val_left = mul_op->mat_A->data[MIDX(i, k, mul_op->mat_A->cols)];
                 float val_right = mul_op->mat_B->data[MIDX(k, j, mul_op->mat_B->cols)]; 
                 mul_op->mat_C->data[MIDX(i, j, mul_op->mat_C->cols)] += val_left * val_right;
-                fprintf(stdout, "mul %1.2f with %1.2f equals %1.2f\n", val_left, val_right, mul_op->mat_C->data[MIDX(i, j, mul_op->mat_C->cols)]);
+                //fprintf(stdout, "mul %1.2f with %1.2f equals %1.2f\n", val_left, val_right, mul_op->mat_C->data[MIDX(i, j, mul_op->mat_C->cols)]);
             }
         }
     }
@@ -138,6 +138,17 @@ void matrix_random_init(matrix* mat){
     for(int i = 0; i < mat->rows * mat->cols; i++){
         float rnd = RAND09();
         mat->data[i] = rnd;
+    }
+}
+
+/**
+ * @brief Initialize a give matrix by using indices as values in increasing order.
+ * 
+ * @param mat 
+ */
+void matrix_simple_init(matrix* mat){
+    for(int i = 0; i < mat->rows * mat->cols; i++){
+        mat->data[i] = (float)i;
     }
 }
 

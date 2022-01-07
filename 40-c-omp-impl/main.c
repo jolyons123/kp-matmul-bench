@@ -15,12 +15,11 @@
 #include "matrix/matrix.h"
 
 #define DEV_SEED 11
-#define RAND09() ( (((float) rand()) / (float) RAND_MAX) * 9)
 
 int main(int argc, char* argv[])
 {
     // parse args
-    mat_arg args = {3, 4, 3, 2, 2};
+    mat_arg args = {300, 400, 300, 30, 30};
     /*int res = parse_args(argc, argv, &args);
     if (res != EXIT_SUCCESS){
         print_usage();
@@ -38,12 +37,8 @@ int main(int argc, char* argv[])
     // fill with random values
     //matrix_random_init(&mat_A);
     //matrix_random_init(&mat_B);
-    for(int i = 0; i < mat_A.cols * mat_A.rows; i++){
-        mat_A.data[i] = (float)i;
-    }
-    for(int i = 0; i < mat_B.cols * mat_B.rows; i++){
-        mat_B.data[i] = (float)i;
-    }
+    matrix_simple_init(&mat_A);
+    matrix_simple_init(&mat_B);
     // fill result matrix with zeroes
     memset(mat_C.data, 0.0, mat_C.cols * mat_C.rows * sizeof(float));
 
@@ -60,18 +55,24 @@ int main(int argc, char* argv[])
 
     //print_split_matrix('A', &mult_op.split_A, 20);
     //print_split_matrix('B', &mult_op.split_B, 20);
-    omp_set_num_threads(4);
-    fprintf(stdout, "***\n*Starting compute. Num all threads: %d", omp_get_num_threads());
+    //omp_set_num_threads(4);
+    fprintf(stdout, "***\n*Starting compute. Num max threads: %d\n", omp_get_max_threads());
 
-
+    unsigned char used = 0;
     for(int u = 0; u < mult_op.split_A.rows; u++){
         #pragma omp parallel for
         for(int v = 0; v < mult_op.split_B.cols; v++){
-            fprintf(stdout, "Hello from Thread %d", omp_get_thread_num());
+            int thread_num = omp_get_thread_num();
+            if(thread_num > 1) used = 1;
+
             for(int c = 0; c < mult_op.split_A.cols; c++){
                 sub_matrix_mul(&mult_op, &mult_op.split_A.data[MIDX(u, c, mult_op.split_A.cols)], &mult_op.split_B.data[MIDX(c, v, mult_op.split_B.cols)]);
             }
         }
+    }
+
+    if(used == 1){
+        fprintf(stdout, "Used more than 1 thread!");
     }
     /*sub_matrix_meta one = mult_op.split_A.data[0];
     sub_matrix_meta two = mult_op.split_B.data[0];
