@@ -35,8 +35,9 @@ void free_matrix(matrix* mat);
 void matrix_random_init(matrix* mat);
 int prepare_matrix_mult(matrix* A, matrix* B, matrix* C, int row_split, int col_split, matrix_mult_operation* mult_op);
 void close_matrix_mult(matrix_mult_operation* mult_op);
-void print_matrix(matrix* mat, long row_split, long col_split, long max_len);
-void print_split_matrix(split_matrix* mat, char character, long max_len);
+void print_matrix(char name, matrix* mat, long row_split, long col_split, long max_len);
+void print_split_matrix(char name, split_matrix* mat, long max_len);
+void sub_matrix_mul(matrix_mult_operation* mul_op, sub_matrix_meta* A, sub_matrix_meta* B);
 
 // matrix operations
 #define MIDX(r, c, w) (w * r + c)

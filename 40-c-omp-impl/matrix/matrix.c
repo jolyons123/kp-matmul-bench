@@ -70,6 +70,19 @@ int prepare_matrix_mult(matrix* A, matrix* B, matrix* C, int row_split, int col_
     return EXIT_SUCCESS;
 }
 
+void sub_matrix_mul(matrix_mult_operation* mul_op, sub_matrix_meta* A, sub_matrix_meta* B){
+    for(int i = A->row_start; i < A->row_end; i++){
+        for(int j = B->col_start; j < B->col_end; j++){
+            for(int k = A->col_start; k < A->col_end; k++){
+                float val_left = mul_op->mat_A->data[MIDX(i, k, mul_op->mat_A->cols)];
+                float val_right = mul_op->mat_B->data[MIDX(k, j, mul_op->mat_B->cols)]; 
+                mul_op->mat_C->data[MIDX(i, j, mul_op->mat_C->cols)] += val_left * val_right;
+                fprintf(stdout, "mul %1.2f with %1.2f equals %1.2f\n", val_left, val_right, mul_op->mat_C->data[MIDX(i, j, mul_op->mat_C->cols)]);
+            }
+        }
+    }
+}
+
 /**
  * @brief Create a matrix object and allocate memory for the float array
  * 
@@ -137,10 +150,10 @@ void matrix_random_init(matrix* mat){
  * @param col_split can be negative to disable splitting along rows
  * @param max_len maximum number of columns or rows to print
  */
-void print_matrix(matrix* mat, long row_split, long col_split, long max_len){
+void print_matrix(char name, matrix* mat, long row_split, long col_split, long max_len){
     long max_row = fminl(mat->rows, max_len);
     long max_col = fminl(mat->cols, max_len);
-    fprintf(stdout, "###\n#Printing matrix with \"rows: %d, cols: %d, row_split: %d, col_split: %d\"\n###\n", mat->rows, mat->cols, row_split, col_split);
+    fprintf(stdout, "###\n#Printing matrix \"%c\" with \"rows: %d, cols: %d, row_split: %d, col_split: %d\"\n###\n", name, mat->rows, mat->cols, row_split, col_split);
 
     // For each row
     for(int i = 0; i < max_row; i++){
@@ -169,10 +182,10 @@ void print_matrix(matrix* mat, long row_split, long col_split, long max_len){
     }
 }
 
-void print_split_matrix(split_matrix* mat, char character, long max_len){
+void print_split_matrix(char name, split_matrix* mat, long max_len){
     long max_row = fminl(mat->rows, max_len);
     long max_col = fminl(mat->cols, max_len);
-    fprintf(stdout, "###\n#Printing split-matrix with \"rows: %d, cols: %d\"\n###\n", mat->rows, mat->cols);
+    fprintf(stdout, "###\n#Printing split-matrix \"%c\" with \"rows: %d, cols: %d\"\n###\n", name, mat->rows, mat->cols);
 
     // For each row
     for(int i = 0; i < max_row; i++){
@@ -188,7 +201,7 @@ void print_split_matrix(split_matrix* mat, char character, long max_len){
                 fprintf(stdout, "| ");
             }
             sub_matrix_meta* p = &mat->data[MIDX(i, j, mat->cols)];
-            fprintf(stdout, "%c%d%d[[%d,%d],[%d,%d]] ", character, i, j, p->col_start, p->col_end, p->row_start, p->row_end);
+            fprintf(stdout, "%c%d%d[[%d,%d],[%d,%d]] ", name, i, j, p->col_start, p->col_end, p->row_start, p->row_end);
         }
         fprintf(stdout, "\n");
     }
