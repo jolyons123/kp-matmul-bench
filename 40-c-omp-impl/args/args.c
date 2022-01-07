@@ -20,8 +20,8 @@ int parse_args(int argc, char* argv[], mat_arg* args){
             case 'm': args->m = value; break;
             case 'n': args->n = value; break;
             case 'q': args->q = value; break;
-            case 'a': args->a = value; break;
-            case 'b': args->b = value; break;
+            case 'a': args->row_split = value; break;
+            case 'b': args->col_split = value; break;
             //default:
                 //print_usage();
         }   
