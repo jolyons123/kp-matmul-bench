@@ -41,16 +41,7 @@ int main(int argc, char* argv[])
     // fill result matrix with zeroes
     memset(mat_C.data, 0.0, mat_C.cols * mat_C.rows * sizeof(float));
 
-
-    /*// We need to know how many submatrices we can have in each matrix. This depends on row_split, col_split and the size of the matrix
-    // ??? find out split
-    sub_matrix_dimensions dim_A = get_submatrix_dimensions(&mat_A, args.row_split, args.col_split);
-    sub_matrix_dimensions dim_B = get_submatrix_dimensions(&mat_B, args.row_split, args.col_split);
-    // The array holds the sub_matrix_meta structues which at the end hold the indexes of the respetive submatrix
-    sub_matrix_meta sub_mat_A_list[dim_A.rows * dim_A.cols];
-    sub_matrix_meta sub_mat_B_list[dim_B.rows * dim_B.cols];*/
-
-    //print_matrix(&mat_A, args.row_split, args.col_split, 20);
+    // Print matrices
     print_matrix(&mat_B, args.col_split, args.row_split, 20);
     print_matrix(&mat_A, args.col_split, args.row_split, 20);
 
@@ -61,7 +52,9 @@ int main(int argc, char* argv[])
         return res;
     }
 
+    print_split_matrix(&mult_op.split_A, 'A', 20);
 
+    // Cleanup
     close_matrix_mult(&mult_op);
     free_matrix(&mat_A);
     free_matrix(&mat_B);
