@@ -40,6 +40,8 @@ void print_split_matrix(char name, split_matrix* mat, long max_len);
 void sub_matrix_mul(matrix_mult_operation* mul_op, sub_matrix_meta* A, sub_matrix_meta* B);
 void matrix_simple_init(matrix* mat);
 void matrix_block_mul(matrix_mult_operation* mult_op);
+int matrix_vanilla_mul(matrix* A, matrix* B, matrix* C);
+int matrix_block_mul_2(matrix* A, matrix* B, matrix* C, int row_split, int col_split);
 
 // matrix operations
 #define MIDX(r, c, w) (w * r + c)

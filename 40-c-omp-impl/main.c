@@ -19,7 +19,7 @@
 int main(int argc, char* argv[])
 {
     // parse args
-    mat_arg args = {3, 4, 3, 2, 2};
+    mat_arg args = {3000, 4000, 3000, 20, 20};
     /*int res = parse_args(argc, argv, &args);
     if (res != EXIT_SUCCESS){
         print_usage();
@@ -43,9 +43,11 @@ int main(int argc, char* argv[])
     memset(mat_C.data, 0.0, mat_C.cols * mat_C.rows * sizeof(float));
 
     // Print matrices
-    print_matrix('A', &mat_A, args.col_split, args.row_split, 20);
+    print_matrix('A', &mat_A, args.col_split, args.row_split, 4);
     
-    print_matrix('B', &mat_B, args.col_split, args.row_split, 20);
+    print_matrix('B', &mat_B, args.col_split, args.row_split, 4);
+
+    fprintf(stdout, "Starting calc with parallelized prepared block-wise algorithm:\n");
 
     matrix_mult_operation mult_op;
     int res = prepare_matrix_block_mult(&mat_A, &mat_B, &mat_C, args.row_split, args.col_split, &mult_op);
@@ -56,10 +58,35 @@ int main(int argc, char* argv[])
 
     //print_split_matrix('A', &mult_op.split_A, 20);
     //print_split_matrix('B', &mult_op.split_B, 20);
+    double algorithm_time = omp_get_wtime();
 
     matrix_block_mul(&mult_op);
 
-    print_matrix('C', &mat_C, args.col_split, args.row_split, 20);
+    fprintf(stdout, "Time was \"%04.8f\".. ms", omp_get_wtime() - algorithm_time);
+
+    print_matrix('C', &mat_C, args.col_split, args.row_split, 4);
+
+    fprintf(stdout, "Restarting calc with vanilla algorithm:\n");
+    memset(mat_C.data, 0, mat_C.cols * mat_C.rows * sizeof(float));
+
+    algorithm_time = omp_get_wtime();
+
+    matrix_vanilla_mul(&mat_A, &mat_B, &mat_C);
+
+    fprintf(stdout, "Time was \"%04.8f\".. ms", omp_get_wtime() - algorithm_time);
+
+    print_matrix('C', &mat_C, args.col_split, args.row_split, 4);
+
+    fprintf(stdout, "Restarting calc with all-in-one-function block-wise algorithm:\n");
+    memset(mat_C.data, 0, mat_C.cols * mat_C.rows * sizeof(float));
+
+    algorithm_time = omp_get_wtime();
+
+    matrix_block_mul_2(&mat_A, &mat_B, &mat_C, args.row_split, args.col_split);
+
+    fprintf(stdout, "Time was \"%04.8f\".. ms", omp_get_wtime() - algorithm_time);
+
+    print_matrix('C', &mat_C, args.col_split, args.row_split, 4);
 
     // Cleanup
     close_matrix_mult(&mult_op);

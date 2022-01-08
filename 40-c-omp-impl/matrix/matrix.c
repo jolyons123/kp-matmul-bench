@@ -91,7 +91,7 @@ void matrix_block_mul(matrix_mult_operation* mult_op){
  * @param C 
  * @return int 
  */
-int matrix_mul_vanilla(matrix* A, matrix* B, matrix* C){
+int matrix_vanilla_mul(matrix* A, matrix* B, matrix* C){
     if(A->cols != B->rows) return EXIT_FAILURE;
 
     for(int i = 0; i < A->rows; i++){
@@ -101,6 +101,31 @@ int matrix_mul_vanilla(matrix* A, matrix* B, matrix* C){
             }
         }
     }
+
+    return EXIT_SUCCESS;
+}
+
+int matrix_block_mul_2(matrix* A, matrix* B, matrix* C, int row_split, int col_split){
+    if(A->cols != B->rows) return EXIT_FAILURE;
+
+    // The following three loops are iterating over the block matrices
+    for(int i_ = 0; i_ < A->rows; i_ += row_split){
+        // Note: we are going in row_split steps along the columns of B because the split along rows of A has to be equal to the split along columns of B
+        for(int j_ = 0; j_ < B->cols; j_ += row_split){
+            for(int k_ = 0; k_ < A->cols; k_ += col_split){
+                // The remaining loops are for the regular matrix multiplication with the exception to minor changes due to block matrix multiplication
+                for(int i = i_; i < fminl(i_ + row_split, A->rows); i++){
+                    for(int j = j_; j < fminl(j_ + row_split, B->cols); j++){
+                        for(int k = k_; k < fminl(k_ + col_split, A->cols); k++){
+                            C->data[MIDX(i, j, C->cols)] += A->data[MIDX(i, k, A->cols)] * B->data[MIDX(k, j, B->cols)];
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return EXIT_SUCCESS;
 }
 
 
