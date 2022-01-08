@@ -4,6 +4,7 @@
 #include "matrix.h"
 
 #define RAND09() ( (((float) rand()) / (float) RAND_MAX) * 9)
+#define RAND(x) ( (((float) rand()) / (float) RAND_MAX) * x)
 
 /**
  * @brief Prepare a block-wise matrix multiplication by partitioning the input matrices into blocks of
@@ -17,7 +18,7 @@
  * @param mult_op 
  * @return int 
  */
-int prepare_matrix_mult(matrix* A, matrix* B, matrix* C, int row_split, int col_split, matrix_mult_operation* mult_op){
+int prepare_matrix_block_mult(matrix* A, matrix* B, matrix* C, int row_split, int col_split, matrix_mult_operation* mult_op){
     // check if mul is compatible
     if(A->cols != B->rows || C->rows != A->rows || C->cols != B->cols) return EXIT_FAILURE;
 
@@ -70,17 +71,38 @@ int prepare_matrix_mult(matrix* A, matrix* B, matrix* C, int row_split, int col_
     return EXIT_SUCCESS;
 }
 
-void matrix_mul(matrix_mult_operation* mult_op){
+void matrix_block_mul(matrix_mult_operation* mult_op){
     fprintf(stdout, "***\n*Starting compute. Num max threads: %d\n", omp_get_max_threads());
     for(int u = 0; u < mult_op->split_A.rows; u++){
         #pragma omp parallel for
         for(int v = 0; v < mult_op->split_B.cols; v++){
             for(int c = 0; c < mult_op->split_A.cols; c++){
-                sub_matrix_mul(&mult_op, &mult_op->split_A.data[MIDX(u, c, mult_op->split_A.cols)], &mult_op->split_B.data[MIDX(c, v, mult_op->split_B.cols)]);
+                sub_matrix_mul(mult_op, &mult_op->split_A.data[MIDX(u, c, mult_op->split_A.cols)], &mult_op->split_B.data[MIDX(c, v, mult_op->split_B.cols)]);
             }
         }
     }
 }
+
+/**
+ * @brief Multiply two given matrices A and B in vanilla style and store the result in C
+ * 
+ * @param A 
+ * @param B 
+ * @param C 
+ * @return int 
+ */
+int matrix_mul_vanilla(matrix* A, matrix* B, matrix* C){
+    if(A->cols != B->rows) return EXIT_FAILURE;
+
+    for(int i = 0; i < A->rows; i++){
+        for(int j = 0; j < B->cols; j++){
+            for(int k = 0; k < A->cols; k++){
+                C->data[MIDX(i, j, C->cols)] += A->data[MIDX(i, k, A->cols)] * B->data[MIDX(k, j, B->cols)];
+            }
+        }
+    }
+}
+
 
 void sub_matrix_mul(matrix_mult_operation* mul_op, sub_matrix_meta* A, sub_matrix_meta* B){
     for(int i = A->row_start; i < A->row_end; i++){
@@ -148,7 +170,8 @@ long get_matrix_size(long rows, long cols){
  */
 void matrix_random_init(matrix* mat, float max){
     for(int i = 0; i < mat->rows * mat->cols; i++){
-        float rnd = RAND09();
+        float rnd = RAND(max);
+        fprintf(stdout, "Generating random number: %1.2f\n", rnd);
         mat->data[i] = rnd;
     }
 }
