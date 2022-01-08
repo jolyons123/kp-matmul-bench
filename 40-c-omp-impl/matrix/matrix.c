@@ -70,6 +70,18 @@ int prepare_matrix_mult(matrix* A, matrix* B, matrix* C, int row_split, int col_
     return EXIT_SUCCESS;
 }
 
+void matrix_mul(matrix_mult_operation* mult_op){
+    fprintf(stdout, "***\n*Starting compute. Num max threads: %d\n", omp_get_max_threads());
+    for(int u = 0; u < mult_op->split_A.rows; u++){
+        #pragma omp parallel for
+        for(int v = 0; v < mult_op->split_B.cols; v++){
+            for(int c = 0; c < mult_op->split_A.cols; c++){
+                sub_matrix_mul(&mult_op, &mult_op->split_A.data[MIDX(u, c, mult_op->split_A.cols)], &mult_op->split_B.data[MIDX(c, v, mult_op->split_B.cols)]);
+            }
+        }
+    }
+}
+
 void sub_matrix_mul(matrix_mult_operation* mul_op, sub_matrix_meta* A, sub_matrix_meta* B){
     for(int i = A->row_start; i < A->row_end; i++){
         for(int j = B->col_start; j < B->col_end; j++){
@@ -134,7 +146,7 @@ long get_matrix_size(long rows, long cols){
  * 
  * @param mat 
  */
-void matrix_random_init(matrix* mat){
+void matrix_random_init(matrix* mat, float max){
     for(int i = 0; i < mat->rows * mat->cols; i++){
         float rnd = RAND09();
         mat->data[i] = rnd;
@@ -193,6 +205,13 @@ void print_matrix(char name, matrix* mat, long row_split, long col_split, long m
     }
 }
 
+/**
+ * @brief Print the given split_matrix
+ * 
+ * @param name 
+ * @param mat 
+ * @param max_len 
+ */
 void print_split_matrix(char name, split_matrix* mat, long max_len){
     long max_row = fminl(mat->rows, max_len);
     long max_col = fminl(mat->cols, max_len);
@@ -200,17 +219,8 @@ void print_split_matrix(char name, split_matrix* mat, long max_len){
 
     // For each row
     for(int i = 0; i < max_row; i++){
-        // Print horizontal split line
-        if(i > 0){
-            fprintf(stdout, "--\n");
-        }
-        
         // For each col
         for(int j = 0; j < max_col; j++){
-            // Print vertical split line
-            if(j > 0){
-                fprintf(stdout, "| ");
-            }
             sub_matrix_meta* p = &mat->data[MIDX(i, j, mat->cols)];
             fprintf(stdout, "%c%d%d[[%d,%d],[%d,%d]] ", name, i, j, p->col_start, p->col_end, p->row_start, p->row_end);
         }

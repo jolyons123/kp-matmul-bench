@@ -1,11 +1,45 @@
-cmake_minimum_required(VERSION 2.8.12)
+cmake_minimum_required(VERSION 3.5)
 
 project(matrixmul)
 
+# packages
 find_package(OpenMP REQUIRED)
+
+Include(FetchContent)
+
+FetchContent_Declare(
+  Catch2
+  GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+  GIT_TAG        v3.0.0-preview3
+)
+
+FetchContent_MakeAvailable(Catch2)
+
 include_directories(${PROJECT_SOURCE_DIR})
-add_executable(app main.c args/args.c matrix/matrix.c)  # be sure there's exactly one main() function in the source files
-find_package(OpenMP)
-if(OpenMP_CXX_FOUND)
-    target_link_libraries(app PUBLIC OpenMP::OpenMP_CXX)
-endif()
+
+# Build executable
+add_library(matrix matrix/matrix.c)
+target_link_libraries(matrix PRIVATE OpenMP::OpenMP_CXX)
+add_executable(app main.c args/args.c)
+target_link_libraries(app PRIVATE matrix)
+
+# Test executable
+include_directories(${PROJECT_SOURCE_DIR}/test)
+add_executable(tests test/test.cpp)
+target_link_libraries(tests PRIVATE Catch2::Catch2WithMain matrix)
+
+# modules for running tests and coverage
+list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras ${PROJECT_SOURCE_DIR}/cmake-modules)
+
+include(CTest)
+include(Catch)
+include(CodeCoverage)
+find_program( GCOVR_PATH gcovr PATHS "C:/ProgramData/Miniconda3/Scripts")
+
+append_coverage_compiler_flags()
+setup_target_for_coverage_gcovr_html(
+    NAME coverage
+    EXECUTABLE tests
+    BASE_DIRECTORY "${PROJECT_SOURCE_DIR}"
+    EXCLUDE "build/*" "test/*") 
+catch_discover_tests(tests)
