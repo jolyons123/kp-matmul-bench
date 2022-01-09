@@ -3,7 +3,7 @@
 
 #include "args.h"
 
-const char* print_usage();
+void print_usage();
 
 int parse_args(int argc, char* argv[], mat_arg* args){
     unsigned short i;
@@ -31,6 +31,6 @@ int parse_args(int argc, char* argv[], mat_arg* args){
     return EXIT_SUCCESS;
 }
 
-const char* print_usage(){
+void print_usage(){
     fprintf(stderr, "Usage: {executable} [-mnqab]\n\tAll parameters are mandatory.\n\tMultiply matrix A (m rows and n columns) with matrix B (n rows and q columns)\n\tsplitting matrix A alongside its rows by a and alongside its columns by b.");
 }

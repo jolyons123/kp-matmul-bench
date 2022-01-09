@@ -18,15 +18,18 @@ FetchContent_MakeAvailable(Catch2)
 include_directories(${PROJECT_SOURCE_DIR})
 
 # Build executable
-add_library(matrix matrix/matrix.c)
-target_link_libraries(matrix PRIVATE OpenMP::OpenMP_CXX)
-add_executable(app main.c args/args.c)
-target_link_libraries(app PRIVATE matrix)
+#add_library(matrix matrix/matrix.c)
+#target_link_libraries(matrix PUBLIC OpenMP::OpenMP_CXX)
+add_executable(app main.c args/args.c matrix/matrix.c)
+#target_link_libraries(app PRIVATE matrix)
+target_link_libraries(app PRIVATE OpenMP::OpenMP_CXX)
+target_compile_options(app PRIVATE -Wall -Wextra -Wpedantic -Wunknown-pragmas -Werror -fopenmp)
 
 # Test executable
 include_directories(${PROJECT_SOURCE_DIR}/test)
-add_executable(tests test/test.cpp)
-target_link_libraries(tests PRIVATE Catch2::Catch2WithMain matrix)
+add_executable(tests test/test.cpp matrix/matrix.c)
+#target_link_libraries(tests PRIVATE Catch2::Catch2WithMain matrix)
+target_link_libraries(tests PRIVATE Catch2::Catch2WithMain OpenMP::OpenMP_CXX)
 
 # modules for running tests and coverage
 list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras ${PROJECT_SOURCE_DIR}/cmake-modules)

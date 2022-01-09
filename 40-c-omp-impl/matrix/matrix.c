@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#include <omp.h>
 #include "matrix.h"
 
 #define RAND09() ( (((float) rand()) / (float) RAND_MAX) * 9)
@@ -72,7 +73,7 @@ int prepare_matrix_block_mult(matrix* A, matrix* B, matrix* C, int row_split, in
 }
 
 void matrix_block_mul(matrix_mult_operation* mult_op){
-    fprintf(stdout, "***\n*Starting compute. Num max threads: %d\n", omp_get_max_threads());
+    //fprintf(stdout, "***\n*Starting compute. Num max threads: %d\n", omp_get_max_threads());
     for(int u = 0; u < mult_op->split_A.rows; u++){
         #pragma omp parallel for
         for(int v = 0; v < mult_op->split_B.cols; v++){
@@ -105,12 +106,30 @@ int matrix_vanilla_mul(matrix* A, matrix* B, matrix* C){
     return EXIT_SUCCESS;
 }
 
+int matrix_vanilla_mul_omp(matrix* A, matrix* B, matrix* C){
+    if(A->cols != B->rows) return EXIT_FAILURE;
+
+    #pragma omp parallel for
+    for(int i = 0; i < A->rows; i++){
+        for(int j = 0; j < B->cols; j++){
+            float dot = 0;
+            for(int k = 0; k < A->cols; k++){
+                dot += A->data[MIDX(i, k, A->cols)] * B->data[MIDX(k, j, B->cols)];
+            }
+            C->data[MIDX(i, j, C->cols)] = dot;
+        }
+    }
+    
+    return EXIT_SUCCESS;
+}
+
 int matrix_block_mul_2(matrix* A, matrix* B, matrix* C, int row_split, int col_split){
     if(A->cols != B->rows) return EXIT_FAILURE;
 
     // The following three loops are iterating over the block matrices
     for(int i_ = 0; i_ < A->rows; i_ += row_split){
         // Note: we are going in row_split steps along the columns of B because the split along rows of A has to be equal to the split along columns of B
+        //#pragma omp parallel for
         for(int j_ = 0; j_ < B->cols; j_ += row_split){
             for(int k_ = 0; k_ < A->cols; k_ += col_split){
                 // The remaining loops are for the regular matrix multiplication with the exception to minor changes due to block matrix multiplication
@@ -196,7 +215,7 @@ long get_matrix_size(long rows, long cols){
 void matrix_random_init(matrix* mat, float max){
     for(int i = 0; i < mat->rows * mat->cols; i++){
         float rnd = RAND(max);
-        fprintf(stdout, "Generating random number: %1.2f\n", rnd);
+        //fprintf(stdout, "Generating random number: %1.2f\n", rnd);
         mat->data[i] = rnd;
     }
 }
@@ -224,7 +243,7 @@ void matrix_simple_init(matrix* mat){
 void print_matrix(char name, matrix* mat, long row_split, long col_split, long max_len){
     long max_row = fminl(mat->rows, max_len);
     long max_col = fminl(mat->cols, max_len);
-    fprintf(stdout, "###\n#Printing matrix \"%c\" with \"rows: %d, cols: %d, row_split: %d, col_split: %d\"\n###\n", name, mat->rows, mat->cols, row_split, col_split);
+    fprintf(stdout, "###\n#Printing matrix \"%c\" with \"rows: %ld, cols: %ld, row_split: %ld, col_split: %ld\"\n###\n", name, mat->rows, mat->cols, row_split, col_split);
 
     // For each row
     for(int i = 0; i < max_row; i++){
@@ -263,14 +282,14 @@ void print_matrix(char name, matrix* mat, long row_split, long col_split, long m
 void print_split_matrix(char name, split_matrix* mat, long max_len){
     long max_row = fminl(mat->rows, max_len);
     long max_col = fminl(mat->cols, max_len);
-    fprintf(stdout, "###\n#Printing split-matrix \"%c\" with \"rows: %d, cols: %d\"\n###\n", name, mat->rows, mat->cols);
+    fprintf(stdout, "###\n#Printing split-matrix \"%c\" with \"rows: %ld, cols: %ld\"\n###\n", name, mat->rows, mat->cols);
 
     // For each row
     for(int i = 0; i < max_row; i++){
         // For each col
         for(int j = 0; j < max_col; j++){
             sub_matrix_meta* p = &mat->data[MIDX(i, j, mat->cols)];
-            fprintf(stdout, "%c%d%d[[%d,%d],[%d,%d]] ", name, i, j, p->col_start, p->col_end, p->row_start, p->row_end);
+            fprintf(stdout, "%c%d%d[[%ld,%ld],[%ld,%ld]] ", name, i, j, p->col_start, p->col_end, p->row_start, p->row_end);
         }
         fprintf(stdout, "\n");
     }

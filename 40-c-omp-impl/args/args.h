@@ -7,4 +7,4 @@ typedef struct mat_arg{
 } mat_arg;
 
 int parse_args(int argc, char* argv[], mat_arg* args);
-const char* print_usage();
+void print_usage();

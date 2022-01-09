@@ -42,6 +42,7 @@ void matrix_simple_init(matrix* mat);
 void matrix_block_mul(matrix_mult_operation* mult_op);
 int matrix_vanilla_mul(matrix* A, matrix* B, matrix* C);
 int matrix_block_mul_2(matrix* A, matrix* B, matrix* C, int row_split, int col_split);
+int matrix_vanilla_mul_omp(matrix* A, matrix* B, matrix* C);
 
 // matrix operations
 #define MIDX(r, c, w) (w * r + c)
