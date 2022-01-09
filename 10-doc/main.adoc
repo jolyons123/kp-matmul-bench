@@ -1,0 +1,33 @@
+= Comparing Golang conrurrent programming with OpenMP in C: Block-wise matrix-matrix multiplication benchmark
+John Lyons(c) 2022
+Version 0.1, 09.01.2022
+:sectnums:
+:toc:
+:toclevels: 4                                                       
+:toc-title: Overview                                    
+                                                
+:description: Matrix-matrix multiplication with OpenMP in C vs. Golang
+:keywords: matrix multiplication, Golang, C, OpenMP, concurrency, parallelism                             
+:imagesdir: ./figures                                                 
+
+== Introduction
+
+The C programming language exists since 1972 and is in one of the most often used programming languages in the past 50 years. It is imperative, statically typed and compiles into native cpu instructions. By design it allows low-level access to hardware and memory and thus various operating systems or IoT Devices are programmed with C.
+
+During the past years multi-core programming became more popular because new cpus tend to have more cores than older ones. As such programs extensively profit from concurrent programming. Because C is relatively old it does not come with concurrency in mind: One has to use the operating systems' features in order to implement parallel logic. While this is not bad by itself there is still the need of managing multiply threads, which can be annoying at times or can lead to mistakes.
+
+OpenMP is a library which was first released in 1997 for the Fortran programming language. The C version of OpenMP was released one year later. It comes in mind of parallelizing classic __loops__ where the amount of iterations is already known in the beginning. Implementing OpenMP is theoretically fairly easy but comes with many traps as we will see later.
+
+On the other hand __Golang__ is a new language released in 2009 by Rob Pike et. al. ......
+
+These days matrix multiplications are very common, for example in game rendering or machine learning scenarios. Speaking of machine learning neural models are constantly gaining more and more popularity. Those models have can have a large amount of parameters and as such training those models is computationally expensive. Training data are being loaded into matrices and those are multiplied with matrices representing the neural model's parameters across all layers. 
+
+Solutions for fast matrix-matrix multiplication already exist. For example there is Basic Linear Algebra Subprograms (BLAS) which can be used in C in order to make use of an efficient matrix-matrix multiplication. Other than that there is __nvidia cuda__ or __amd rocm__ which allow relocating concurrent workloads on gpus which are highly optimized for such tasks.
+
+Because both the Go as well as the OpenMP implementation heavily rely on the memory layout and some of the core ideas of matrix-matrix multiplication the following chapter deals with some of the basics.
+
+== Matrix-multiplication basics
+
+Fig. XYZ depicts a basic matrix-matrix multiplication..
+
+== 

@@ -1,5 +1,6 @@
+#include <matrix/matrix.h>
 #include <catch2/catch_test_macros.hpp>
-#include "matrix/matrix.h"
+
 
 TEST_CASE( "Create a matrix", "[matrix]" ) {
     matrix mat = create_matrix(4, 5);
