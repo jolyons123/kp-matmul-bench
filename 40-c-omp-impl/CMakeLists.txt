@@ -23,14 +23,19 @@ include_directories(${PROJECT_SOURCE_DIR})
 # Compile options #
 ###################
 add_compile_options(-Wall -Wextra -Wpedantic -Wunknown-pragmas -Werror -fopenmp)
+#set_property(TARGET all PROPERTY C_STANDARD 99)
+
 
 ####################
 # Build executable #
 ####################
 add_library(matrix matrix/matrix.c)
-target_link_libraries(matrix PUBLIC OpenMP::OpenMP_CXX)
+target_link_libraries(matrix PUBLIC OpenMP::OpenMP_CXX m)
+set_property(TARGET matrix PROPERTY C_STANDARD 99)
+
 add_executable(app main.c args/args.c)
-target_link_libraries(app PRIVATE matrix)
+target_link_libraries(app PUBLIC matrix)
+set_property(TARGET app PROPERTY C_STANDARD 99)
 #target_link_libraries(app PRIVATE OpenMP::OpenMP_CXX)
 #target_compile_options(app PRIVATE -Wall -Wextra -Wpedantic -Wunknown-pragmas -Werror -fopenmp)
 #set_property(TARGET app PROPERTY C_STANDARD 99)
@@ -49,14 +54,14 @@ list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras ${PROJECT_SOURCE_DIR}/
 
 include(CTest)
 include(Catch)
-include(CodeCoverage)
-# Override program path to gcovr
-find_program( GCOVR_PATH gcovr PATHS "C:/ProgramData/Miniconda3/Scripts")
-
-append_coverage_compiler_flags()
-setup_target_for_coverage_gcovr_html(
-    NAME coverage
-    EXECUTABLE tests
-    BASE_DIRECTORY "${PROJECT_SOURCE_DIR}"
-    EXCLUDE "build/*" "test/*") 
 catch_discover_tests(tests)
+#include(CodeCoverage)
+# Override program path to gcovr
+#find_program( GCOVR_PATH gcovr PATHS "C:/ProgramData/Miniconda3/Scripts")
+
+#append_coverage_compiler_flags()
+#setup_target_for_coverage_gcovr_html(
+#    NAME coverage
+#    EXECUTABLE tests
+#    BASE_DIRECTORY "${PROJECT_SOURCE_DIR}"
+#    EXCLUDE "build/*" "test/*") 

@@ -1,5 +1,7 @@
-#include <matrix/matrix.h>
 #include <catch2/catch_test_macros.hpp>
+extern "C" {
+    #include <matrix/matrix.h>
+}
 
 
 TEST_CASE( "Create a matrix", "[matrix]" ) {
@@ -11,14 +13,14 @@ TEST_CASE( "Create a matrix", "[matrix]" ) {
     free_matrix(&mat);
 }
 
-/* TEST_CASE( "Free a matrix", "[matrix]" ) {
+TEST_CASE( "Free a matrix", "[matrix]" ) {
     matrix mat = create_matrix(4, 5);
     free_matrix(&mat);
 
     REQUIRE( mat.data == NULL );
-} */
+}
 
-/* TEST_CASE( "Prepare a matrix block multiplication", "[matrix]" ) {
+TEST_CASE( "Prepare a matrix block multiplication", "[matrix]" ) {
     matrix mat_A = create_matrix(4, 3);
     matrix mat_B = create_matrix(3, 4);
     matrix mat_C = create_matrix(4, 4);
@@ -39,9 +41,9 @@ TEST_CASE( "Create a matrix", "[matrix]" ) {
         int res = prepare_matrix_block_mult(&mat_A, &mat_B, &mat_C, block_size, block_size, &mult_op);
 
         REQUIRE( res == EXIT_SUCCESS );
-        REQUIRE( mult_op.split_A.cols * mult_op.split_A.rows == sizeof(submatrix_list_A) );
-        REQUIRE( mult_op.split_B.cols * mult_op.split_B.rows == sizeof(submatrix_list_B) );
-        for(size_t i = 0; i < sizeof(submatrix_list_A); i++){
+        REQUIRE( mult_op.split_A.cols * mult_op.split_A.rows == sizeof(submatrix_list_A) / sizeof(sub_matrix_meta) );
+        REQUIRE( mult_op.split_B.cols * mult_op.split_B.rows == sizeof(submatrix_list_B) / sizeof(sub_matrix_meta) );
+        for(size_t i = 0; i < sizeof(submatrix_list_A) / sizeof(sub_matrix_meta); i++){
             REQUIRE( submatrix_list_A[i].row_start == mult_op.split_A.data[i].row_start );
             REQUIRE( submatrix_list_A[i].row_end == mult_op.split_A.data[i].row_end );
             REQUIRE( submatrix_list_A[i].col_start == mult_op.split_A.data[i].col_start );
@@ -52,7 +54,7 @@ TEST_CASE( "Create a matrix", "[matrix]" ) {
     free_matrix(&mat_A);
     free_matrix(&mat_B);
     free_matrix(&mat_C);
-} */
+}
 
 /*TEST_CASE( "Matrix-matrix multiplication", "[matrix]" ) {
     int n = 4;

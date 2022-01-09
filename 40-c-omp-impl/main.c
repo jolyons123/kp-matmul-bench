@@ -9,6 +9,7 @@
 #include <Windows.h>
 #else
 #include <unistd.h>
+#include <string.h>
 #endif
 
 #include "args/args.h"
