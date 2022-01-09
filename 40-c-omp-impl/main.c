@@ -16,26 +16,10 @@
 
 #define DEV_SEED 11
 
-void gemm_omp(double *A, double *B, double *C, int n) 
-{   
-    int i,j,k;
-    #pragma omp parallel for private(j,k)
-    for (i = 0; i < n; i++) { 
-        for (j = 0; j < n; j++) {
-            double dot  = 0;
-             
-            for (k = 0; k < n; k++) {
-                dot += A[i*n+k]*B[k*n+j];
-            } 
-            C[i*n+j ] = dot;
-        }
-    }
-}
-
 int main(/*int argc, char* argv[]*/)
 {
     // parse args
-    mat_arg args = {1000, 1000, 1000, 250, 250};
+    mat_arg args = {1000, 1000, 1000, 20, 20};
     /*int res = parse_args(argc, argv, &args);
     if (res != EXIT_SUCCESS){
         print_usage();
@@ -68,10 +52,8 @@ int main(/*int argc, char* argv[]*/)
     }
 
     double algorithm_time;
-    /*fprintf(stdout, "Starting calc with prepared block-wise algorithm:\n");
+    fprintf(stdout, "Starting calc with prepared block-wise algorithm:\n");
 
-    //print_split_matrix('A', &mult_op.split_A, 20);
-    //print_split_matrix('B', &mult_op.split_B, 20);
     algorithm_time = omp_get_wtime();
     matrix_block_mul(&mult_op);
     algorithm_time = omp_get_wtime() - algorithm_time;
@@ -99,37 +81,18 @@ int main(/*int argc, char* argv[]*/)
     algorithm_time = omp_get_wtime();
     matrix_vanilla_mul_omp(&mat_A, &mat_B, &mat_C);
     algorithm_time = omp_get_wtime() - algorithm_time;
-    fprintf(stdout, "Time was \"%04.8f\".. ms\n", algorithm_time);*/
+    fprintf(stdout, "Time was \"%04.8f\".. ms\n", algorithm_time);
 
-    int n = 1000;
-    double *A, *B, *C;
-    A = (double*)malloc(sizeof(double)*n*n);
-    B = (double*)malloc(sizeof(double)*n*n);
-    C = (double*)malloc(sizeof(double)*n*n);
-    for(int i=0; i<n*n; i++) { A[i] = rand()/RAND_MAX; B[i] = rand()/RAND_MAX;}
-
-    fprintf(stdout, "Restarting calc with gemm_omp algorithm:\n");
+    fprintf(stdout, "Restarting calc with all-in-one-function block-wise omp algorithm:\n");
     memset(mat_C.data, 0, mat_C.cols * mat_C.rows * sizeof(float));
 
     algorithm_time = omp_get_wtime();
-    gemm_omp(A, B, C, n);
+    matrix_block_mul_inline_omp(&mat_A, &mat_B, &mat_C, args.row_split, args.col_split);
     algorithm_time = omp_get_wtime() - algorithm_time;
     fprintf(stdout, "Time was \"%04.8f\".. ms\n", algorithm_time);
 
-    free(A);
-    free(B);
-    free(C);
-
-    /*fprintf(stdout, "Restarting calc with all-in-one-function block-wise algorithm:\n");
-    memset(mat_C.data, 0, mat_C.cols * mat_C.rows * sizeof(float));
-
-    algorithm_time = omp_get_wtime();
-    matrix_block_mul_2(&mat_A, &mat_B, &mat_C, args.row_split, args.col_split);
-    algorithm_time = omp_get_wtime() - algorithm_time;
-    fprintf(stdout, "Time was \"%04.8f\".. ms\n", algorithm_time);*/
-
     // Cleanup
-    //close_matrix_mult(&mult_op);
+    close_matrix_mult(&mult_op);
     free_matrix(&mat_A);
     free_matrix(&mat_B);
     free_matrix(&mat_C);

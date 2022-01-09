@@ -9,7 +9,8 @@
 
 /**
  * @brief Prepare a block-wise matrix multiplication by partitioning the input matrices into blocks of
- * size row_split and col_split and further calculating the index ranges for each submatrix
+ * size row_split and col_split and further calculating the index ranges for each submatrix.
+ * This implementation of calculating the indices is not supposed to be efficient.
  * 
  * @param A 
  * @param B 
@@ -72,10 +73,19 @@ int prepare_matrix_block_mult(matrix* A, matrix* B, matrix* C, int row_split, in
     return EXIT_SUCCESS;
 }
 
+/**
+ * @brief Perform block-wise matrix-matrix multiplication with OpenMP parallelism which uses precomputed
+ * indices of submatrices.
+ * In contrast to the Go implementation the OpenMP implementation does perform poorly on a 
+ * ryzen 2600x with hyperthreading. Reducing the thread count to the number of physical cores,
+ * using C89 syntax, declaring inner loop variables as private, outsourcing the inner loops, etc. 
+ * did NOT help.
+ * 
+ * @param mult_op 
+ */
 void matrix_block_mul_omp(matrix_mult_operation* mult_op){
-    //fprintf(stdout, "***\n*Starting compute. Num max threads: %d\n", omp_get_max_threads());
+    #pragma omp parallel for
     for(int u = 0; u < mult_op->split_A.rows; u++){
-        #pragma omp parallel for
         for(int v = 0; v < mult_op->split_B.cols; v++){
             for(int c = 0; c < mult_op->split_A.cols; c++){
                 sub_matrix_mul(mult_op, &mult_op->split_A.data[MIDX(u, c, mult_op->split_A.cols)], &mult_op->split_B.data[MIDX(c, v, mult_op->split_B.cols)]);
@@ -84,6 +94,12 @@ void matrix_block_mul_omp(matrix_mult_operation* mult_op){
     }
 }
 
+/**
+ * @brief Perform block-wise matrix-matrix multiplication by using precomputed
+ * indices of submatrices.
+ * 
+ * @param mult_op 
+ */
 void matrix_block_mul(matrix_mult_operation* mult_op){
     for(int u = 0; u < mult_op->split_A.rows; u++){
         for(int v = 0; v < mult_op->split_B.cols; v++){
@@ -92,6 +108,63 @@ void matrix_block_mul(matrix_mult_operation* mult_op){
             }
         }
     }
+}
+
+/**
+ * @brief Multiplies two submatrices during a block-wise matrix-matrix multiplication using
+ * precomputed indices.
+ * 
+ * @param mul_op 
+ * @param A 
+ * @param B 
+ */
+void sub_matrix_mul(matrix_mult_operation* mul_op, sub_matrix_meta* A, sub_matrix_meta* B){
+    for(int i = A->row_start; i < A->row_end; i++){
+        for(int j = B->col_start; j < B->col_end; j++){
+            for(int k = A->col_start; k < A->col_end; k++){
+                float val_left = mul_op->mat_A->data[MIDX(i, k, mul_op->mat_A->cols)];
+                float val_right = mul_op->mat_B->data[MIDX(k, j, mul_op->mat_B->cols)]; 
+                mul_op->mat_C->data[MIDX(i, j, mul_op->mat_C->cols)] += val_left * val_right;
+                //fprintf(stdout, "mul %1.2f with %1.2f equals %1.2f\n", val_left, val_right, mul_op->mat_C->data[MIDX(i, j, mul_op->mat_C->cols)]);
+            }
+        }
+    }
+}
+
+/**
+ * @brief Perform block-wise matrix-matrix multiplication with OpenMP parallelism without
+ * precomputed indices.
+ * Peformance is almost equal to precomputed indices version. See @matrix_block_mul_omp
+ * 
+ * @param A 
+ * @param B 
+ * @param C 
+ * @param row_split 
+ * @param col_split 
+ * @return int 
+ */
+int matrix_block_mul_inline_omp(matrix* A, matrix* B, matrix* C, int row_split, int col_split){
+    if(A->cols != B->rows) return EXIT_FAILURE;
+
+    // The following three loops are iterating over the block matrices
+    #pragma omp parallel for
+    for(int i_ = 0; i_ < A->rows; i_ += row_split){
+        // Note: we are going in row_split steps along the columns of B because the split along rows of A has to be equal to the split along columns of B
+        for(int j_ = 0; j_ < B->cols; j_ += row_split){
+            for(int k_ = 0; k_ < A->cols; k_ += col_split){
+                // The remaining loops are for the regular matrix multiplication with the exception to minor changes due to block matrix multiplication
+                for(int i = i_; i < fminl(i_ + row_split, A->rows); i++){
+                    for(int j = j_; j < fminl(j_ + row_split, B->cols); j++){
+                        for(int k = k_; k < fminl(k_ + col_split, A->cols); k++){
+                            C->data[MIDX(i, j, C->cols)] += A->data[MIDX(i, k, A->cols)] * B->data[MIDX(k, j, B->cols)];
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return EXIT_SUCCESS;
 }
 
 /**
@@ -116,6 +189,18 @@ int matrix_vanilla_mul(matrix* A, matrix* B, matrix* C){
     return EXIT_SUCCESS;
 }
 
+/**
+ * @brief Multiply two given matrices A and B in vanilla style and store the result in C.
+ * In contrast to the Go implementation the OpenMP implementation does perform poorly on a 
+ * ryzen 2600x with hyperthreading. Reducing the thread count to the number of physical cores,
+ * using C89 syntax, declaring inner loop variables as private, outsourcing the inner loops, etc. 
+ * did NOT help.
+ * 
+ * @param A 
+ * @param B 
+ * @param C 
+ * @return int 
+ */
 int matrix_vanilla_mul_omp(matrix* A, matrix* B, matrix* C){
     if(A->cols != B->rows) return EXIT_FAILURE;
 
@@ -131,44 +216,6 @@ int matrix_vanilla_mul_omp(matrix* A, matrix* B, matrix* C){
     }
     
     return EXIT_SUCCESS;
-}
-
-int matrix_block_mul_2(matrix* A, matrix* B, matrix* C, int row_split, int col_split){
-    if(A->cols != B->rows) return EXIT_FAILURE;
-
-    // The following three loops are iterating over the block matrices
-    for(int i_ = 0; i_ < A->rows; i_ += row_split){
-        // Note: we are going in row_split steps along the columns of B because the split along rows of A has to be equal to the split along columns of B
-        //#pragma omp parallel for
-        for(int j_ = 0; j_ < B->cols; j_ += row_split){
-            for(int k_ = 0; k_ < A->cols; k_ += col_split){
-                // The remaining loops are for the regular matrix multiplication with the exception to minor changes due to block matrix multiplication
-                for(int i = i_; i < fminl(i_ + row_split, A->rows); i++){
-                    for(int j = j_; j < fminl(j_ + row_split, B->cols); j++){
-                        for(int k = k_; k < fminl(k_ + col_split, A->cols); k++){
-                            C->data[MIDX(i, j, C->cols)] += A->data[MIDX(i, k, A->cols)] * B->data[MIDX(k, j, B->cols)];
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    return EXIT_SUCCESS;
-}
-
-
-void sub_matrix_mul(matrix_mult_operation* mul_op, sub_matrix_meta* A, sub_matrix_meta* B){
-    for(int i = A->row_start; i < A->row_end; i++){
-        for(int j = B->col_start; j < B->col_end; j++){
-            for(int k = A->col_start; k < A->col_end; k++){
-                float val_left = mul_op->mat_A->data[MIDX(i, k, mul_op->mat_A->cols)];
-                float val_right = mul_op->mat_B->data[MIDX(k, j, mul_op->mat_B->cols)]; 
-                mul_op->mat_C->data[MIDX(i, j, mul_op->mat_C->cols)] += val_left * val_right;
-                //fprintf(stdout, "mul %1.2f with %1.2f equals %1.2f\n", val_left, val_right, mul_op->mat_C->data[MIDX(i, j, mul_op->mat_C->cols)]);
-            }
-        }
-    }
 }
 
 /**
@@ -207,7 +254,7 @@ void free_matrix(matrix* mat){
 }
 
 /**
- * @brief 
+ * @brief Gets total amount of members in a typical matrix
  * 
  * @param rows 
  * @param cols 
