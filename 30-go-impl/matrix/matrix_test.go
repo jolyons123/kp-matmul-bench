@@ -54,20 +54,6 @@ func TestMatMulPar(t *testing.T) {
 	}
 }
 
-func TestMatMulParInline(t *testing.T) {
-	a_copy := a
-	b_copy := b
-	c := [16]float32{}
-
-	matrix.Mat_mul_par_inline(a_copy[:], b_copy[:], c[:], n)
-
-	for i := range c {
-		if c[i] != res[i] {
-			t.Errorf("Matrix does not match at index %d. Should be %f but is %f", i, res[i], c[i])
-		}
-	}
-}
-
 func TestMatMulBlock(t *testing.T) {
 	a_copy := a
 	b_copy := b

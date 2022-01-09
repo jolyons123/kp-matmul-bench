@@ -39,22 +39,6 @@ func main() {
 
 	matrix.Mat_zero(C)
 
-	fmt.Println("Starting calc with vanilla parallel inline gofunc algorithm:")
-	ftime = time.Now().UnixMilli()
-	matrix.Mat_mul_par_inline(A, B, C, n)
-	ftime = time.Now().UnixMilli() - ftime
-	fmt.Printf("Took %d ms \n", ftime)
-
-	matrix.Mat_zero(C)
-
-	fmt.Println("Starting calc with blocked algorithm:")
-	ftime = time.Now().UnixMilli()
-	matrix.Mat_mul_block(A, B, C, n, block_size)
-	ftime = time.Now().UnixMilli() - ftime
-	fmt.Printf("Took %d ms \n", ftime)
-
-	matrix.Mat_zero(C)
-
 	fmt.Println("Starting calc with blocked algorithm:")
 	ftime = time.Now().UnixMilli()
 	matrix.Mat_mul_block(A, B, C, n, block_size)

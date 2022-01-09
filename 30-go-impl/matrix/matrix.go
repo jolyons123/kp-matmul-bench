@@ -32,24 +32,6 @@ func Mat_mul(A []float32, B []float32, C []float32, n int) {
 	}
 }
 
-func Mat_mul_par_inline(A []float32, B []float32, C []float32, n int) {
-	var wg sync.WaitGroup
-	for i := 0; i < n; i++ {
-		wg.Add(1)
-		go func(i int) {
-			defer wg.Done()
-			for j := 0; j < n; j++ {
-				var acc float32 = 0
-				for k := 0; k < n; k++ {
-					acc += A[i*n+k] * B[k*n+j]
-				}
-				C[i*n+j] = acc
-			}
-		}(i)
-	}
-	wg.Wait()
-}
-
 func Mat_mul_par(A []float32, B []float32, C []float32, n int) {
 	var wg sync.WaitGroup
 	for i := 0; i < n; i++ {
