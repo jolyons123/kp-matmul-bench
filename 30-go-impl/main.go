@@ -2,12 +2,14 @@ package main
 
 import (
 	"fmt"
+	"jolyons123/mm-benchmark/matrix"
 	"math/rand"
 	"time"
 )
 
 func main() {
-	n := 2000
+	n := 1000
+	block_size := 20
 	maxFloat := 10000
 	A := make([]float32, n*n)
 	B := make([]float32, n*n)
@@ -15,7 +17,7 @@ func main() {
 	C := make([]float32, n*n)
 
 	rand.Seed(time.Now().UnixNano())
-	for i := 0; i < n; i++ {
+	for i := 0; i < n*n; i++ {
 		A[i] = rand.Float32() * float32(maxFloat)
 		B[i] = rand.Float32() * float32(maxFloat)
 	}
@@ -23,72 +25,48 @@ func main() {
 	var ftime int64
 	fmt.Println("Starting calc with vanilla algorithm:")
 	ftime = time.Now().UnixMilli()
-	mat_mul(A, B, C, n)
+	matrix.Mat_mul(A, B, C, n)
 	ftime = time.Now().UnixMilli() - ftime
 	fmt.Printf("Took %d ms \n", ftime)
 
-	mat_zero(C)
+	matrix.Mat_zero(C)
 
 	fmt.Println("Starting calc with vanilla parallel extern gofunc algorithm:")
 	ftime = time.Now().UnixMilli()
-	mat_mul_par(A, B, C, n)
+	matrix.Mat_mul_par(A, B, C, n)
 	ftime = time.Now().UnixMilli() - ftime
 	fmt.Printf("Took %d ms \n", ftime)
 
-	mat_zero(C)
+	matrix.Mat_zero(C)
 
 	fmt.Println("Starting calc with vanilla parallel inline gofunc algorithm:")
 	ftime = time.Now().UnixMilli()
-	mat_mul_par_inline(A, B, C, n)
+	matrix.Mat_mul_par_inline(A, B, C, n)
 	ftime = time.Now().UnixMilli() - ftime
 	fmt.Printf("Took %d ms \n", ftime)
 
-}
+	matrix.Mat_zero(C)
 
-func mat_zero(mat []float32) {
-	for i := range mat {
-		mat[i] = 0
-	}
-}
+	fmt.Println("Starting calc with blocked algorithm:")
+	ftime = time.Now().UnixMilli()
+	matrix.Mat_mul_block(A, B, C, n, block_size)
+	ftime = time.Now().UnixMilli() - ftime
+	fmt.Printf("Took %d ms \n", ftime)
 
-func mat_mul(A []float32, B []float32, C []float32, n int) {
-	for i := 0; i < n; i++ {
-		for j := 0; j < n; j++ {
-			var acc float32 = 0
-			for k := 0; k < n; k++ {
-				acc += A[i*n+k] * B[k*n+j]
-			}
-			C[i*n+j] = acc
-		}
-	}
-}
+	matrix.Mat_zero(C)
 
-func mat_mul_par_inline(A []float32, B []float32, C []float32, n int) {
-	for i := 0; i < n; i++ {
-		go func(i int) {
-			for j := 0; j < n; j++ {
-				var acc float32 = 0
-				for k := 0; k < n; k++ {
-					acc += A[i*n+k] * B[k*n+j]
-				}
-				C[i*n+j] = acc
-			}
-		}(i)
-	}
-}
+	fmt.Println("Starting calc with blocked algorithm:")
+	ftime = time.Now().UnixMilli()
+	matrix.Mat_mul_block(A, B, C, n, block_size)
+	ftime = time.Now().UnixMilli() - ftime
+	fmt.Printf("Took %d ms \n", ftime)
 
-func mat_mul_par(A []float32, B []float32, C []float32, n int) {
-	for i := 0; i < n; i++ {
-		go mat_mul_par_kernel(A, B, C, n, i)
-	}
-}
+	matrix.Mat_zero(C)
 
-func mat_mul_par_kernel(A []float32, B []float32, C []float32, n int, i int) {
-	for j := 0; j < n; j++ {
-		var acc float32 = 0
-		for k := 0; k < n; k++ {
-			acc += A[i*n+k] * B[k*n+j]
-		}
-		C[i*n+j] = acc
-	}
+	fmt.Println("Starting calc with blocked parallel extern gofunc algorithm:")
+	ftime = time.Now().UnixMilli()
+	matrix.Mat_mul_block_par(A, B, C, n, block_size)
+	ftime = time.Now().UnixMilli() - ftime
+	fmt.Printf("Took %d ms \n", ftime)
+
 }
