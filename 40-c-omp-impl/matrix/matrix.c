@@ -251,6 +251,7 @@ void close_matrix_mult(matrix_mult_operation* mult_op){
  */
 void free_matrix(matrix* mat){
     free(mat->data);
+    mat->data = NULL;
 }
 
 /**
