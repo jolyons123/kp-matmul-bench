@@ -23,7 +23,7 @@ include_directories(${PROJECT_SOURCE_DIR})
 add_executable(app main.c args/args.c matrix/matrix.c)
 #target_link_libraries(app PRIVATE matrix)
 target_link_libraries(app PRIVATE OpenMP::OpenMP_CXX)
-target_compile_options(app PRIVATE -Wall -Wextra -Wpedantic -Wunknown-pragmas -Werror -fopenmp)
+target_compile_options(app PRIVATE -Wall -Wextra -Wpedantic -Wunknown-pragmas -Werror -fopenmp -O3)
 
 # Test executable
 include_directories(${PROJECT_SOURCE_DIR}/test)

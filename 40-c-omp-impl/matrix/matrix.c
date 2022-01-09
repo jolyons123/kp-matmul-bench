@@ -72,10 +72,20 @@ int prepare_matrix_block_mult(matrix* A, matrix* B, matrix* C, int row_split, in
     return EXIT_SUCCESS;
 }
 
-void matrix_block_mul(matrix_mult_operation* mult_op){
+void matrix_block_mul_omp(matrix_mult_operation* mult_op){
     //fprintf(stdout, "***\n*Starting compute. Num max threads: %d\n", omp_get_max_threads());
     for(int u = 0; u < mult_op->split_A.rows; u++){
         #pragma omp parallel for
+        for(int v = 0; v < mult_op->split_B.cols; v++){
+            for(int c = 0; c < mult_op->split_A.cols; c++){
+                sub_matrix_mul(mult_op, &mult_op->split_A.data[MIDX(u, c, mult_op->split_A.cols)], &mult_op->split_B.data[MIDX(c, v, mult_op->split_B.cols)]);
+            }
+        }
+    }
+}
+
+void matrix_block_mul(matrix_mult_operation* mult_op){
+    for(int u = 0; u < mult_op->split_A.rows; u++){
         for(int v = 0; v < mult_op->split_B.cols; v++){
             for(int c = 0; c < mult_op->split_A.cols; c++){
                 sub_matrix_mul(mult_op, &mult_op->split_A.data[MIDX(u, c, mult_op->split_A.cols)], &mult_op->split_B.data[MIDX(c, v, mult_op->split_B.cols)]);
