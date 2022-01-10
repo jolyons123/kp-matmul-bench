@@ -2,6 +2,12 @@
 extern "C" {
     #include <matrix/matrix.h>
 }
+#ifdef _WIN32
+#include <Windows.h>
+#else
+#include <unistd.h>
+#include <string.h>
+#endif
 
 
 TEST_CASE( "Create a matrix", "[matrix]" ) {
@@ -17,7 +23,7 @@ TEST_CASE( "Free a matrix", "[matrix]" ) {
     matrix mat = create_matrix(4, 5);
     free_matrix(&mat);
 
-    REQUIRE( mat.data == NULL );
+    REQUIRE( mat.data == (float*)NULL );
 }
 
 TEST_CASE( "Prepare a matrix block multiplication", "[matrix]" ) {
@@ -49,6 +55,8 @@ TEST_CASE( "Prepare a matrix block multiplication", "[matrix]" ) {
             REQUIRE( submatrix_list_A[i].col_start == mult_op.split_A.data[i].col_start );
             REQUIRE( submatrix_list_A[i].col_end == mult_op.split_A.data[i].col_end );
         }
+
+        close_matrix_mult(&mult_op);
     }
 
     free_matrix(&mat_A);
@@ -56,13 +64,76 @@ TEST_CASE( "Prepare a matrix block multiplication", "[matrix]" ) {
     free_matrix(&mat_C);
 }
 
-/*TEST_CASE( "Matrix-matrix multiplication", "[matrix]" ) {
+TEST_CASE( "Matrix-matrix multiplication", "[matrix]" ) {
     int n = 4;
+    int block_size = 2;
     float a[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
     float b[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
     float res[] = {56, 62, 68, 74, 152, 174, 196, 218, 248, 286, 324, 362, 344, 398, 452, 506};
 
-    SECTION( "Vanilla matrix-matrix multiplication" ) {
+    matrix mat_A = create_matrix(n, n);
+    matrix mat_B = create_matrix(n, n);
+    matrix mat_C = create_matrix(n, n);
 
+    memcpy(mat_A.data, a, sizeof(a));
+    memcpy(mat_B.data, b, sizeof(b));
+
+    SECTION( "Vanilla matrix-matrix multiplication" ) {
+        memset(mat_C.data, 0, sizeof(res));
+        matrix_vanilla_mul(&mat_A, &mat_B, &mat_C);
+
+        for(int i = 0; i < n*n; i++){
+            REQUIRE( mat_C.data[i] == res[i] );
+        }
     }
-}*/
+
+    SECTION( "Parallel vanilla omp matrix-matrix multiplication" ) {
+        memset(mat_C.data, 0, sizeof(res));
+        matrix_vanilla_mul_omp(&mat_A, &mat_B, &mat_C);
+
+        for(int i = 0; i < n*n; i++){
+            REQUIRE( mat_C.data[i] == res[i] );
+        }
+    }
+
+    SECTION( "Prepared blocked matrix-matrix multiplication" ) {
+        matrix_mult_operation mult_op;
+        prepare_matrix_block_mult(&mat_A, &mat_B, &mat_C, block_size, block_size, &mult_op);
+
+        memset(mat_C.data, 0, sizeof(res));
+        matrix_block_mul(&mult_op);
+
+        for(int i = 0; i < n*n; i++){
+            REQUIRE( mult_op.mat_C->data[i] == res[i] );
+        }
+
+        close_matrix_mult(&mult_op);
+    }
+
+    SECTION( "Parallel prepared blocked omp matrix-matrix multiplication" ) {
+        matrix_mult_operation mult_op;
+        prepare_matrix_block_mult(&mat_A, &mat_B, &mat_C, block_size, block_size, &mult_op);
+
+        memset(mat_C.data, 0, sizeof(res));
+        matrix_block_mul_omp(&mult_op);
+
+        for(int i = 0; i < n*n; i++){
+            REQUIRE( mult_op.mat_C->data[i] == res[i] );
+        }
+
+        close_matrix_mult(&mult_op);
+    }
+
+    SECTION( "Parallel inline blocked omp matrix-matrix multiplication" ) {
+        memset(mat_C.data, 0, sizeof(res));
+        matrix_block_mul_inline_omp(&mat_A, &mat_B, &mat_C, block_size, block_size);
+
+        for(int i = 0; i < n*n; i++){
+            REQUIRE( mat_C.data[i] == res[i] );
+        }
+    }
+
+    free_matrix(&mat_A);
+    free_matrix(&mat_B);
+    free_matrix(&mat_C);
+}
