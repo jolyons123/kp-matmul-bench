@@ -17,15 +17,17 @@
 
 #define DEV_SEED 11
 
-int main(/*int argc, char* argv[]*/)
+int main(int argc, char* argv[])
 {
     // parse args
-    mat_arg args = {1000, 1000, 1000, 20, 20};
-    /*int res = parse_args(argc, argv, &args);
+    mat_arg args = {3000, 3000, 3000, 50, 50, 10000};
+    int res = parse_args(argc, argv, &args);
     if (res != EXIT_SUCCESS){
-        print_usage();
         return EXIT_FAILURE;
-    }*/
+    }
+
+    fprintf(stdout, "Creating matrix A with rows = %d, cols = %d and B with rows = %d, cols = %d and max init value = %d" \
+        "\nUsing block size = (%d, %d) for blocked mm algorithm\n", args.m, args.n, args.n, args.q, args.max_float, args.row_split, args.col_split);
 
     // create matrices
     matrix mat_A = create_matrix(args.m, args.n);
@@ -38,59 +40,58 @@ int main(/*int argc, char* argv[]*/)
     // fill with random values
     matrix_random_init(&mat_A, 9.0);
     matrix_random_init(&mat_B, 9.0);
-    // fill result matrix with zeroes
-    memset(mat_C.data, 0.0, mat_C.cols * mat_C.rows * sizeof(float));
 
     // Print matrices
-    print_matrix('A', &mat_A, args.col_split, args.row_split, 4);
-    print_matrix('B', &mat_B, args.col_split, args.row_split, 4);
+    /* print_matrix('A', &mat_A, args.col_split, args.row_split, 4);
+    print_matrix('B', &mat_B, args.col_split, args.row_split, 4); */
 
     matrix_mult_operation mult_op;
-    int res = prepare_matrix_block_mult(&mat_A, &mat_B, &mat_C, args.row_split, args.col_split, &mult_op);
+    res = prepare_matrix_block_mult(&mat_A, &mat_B, &mat_C, args.row_split, args.col_split, &mult_op);
     if(res != EXIT_SUCCESS){
         fprintf(stderr, "Cannot prepare matrix multiplication. Check that dimensions are matching.\n");
         return res;
     }
 
     double algorithm_time;
-    fprintf(stdout, "Starting calc with prepared block-wise algorithm:\n");
 
-    algorithm_time = omp_get_wtime();
-    matrix_block_mul(&mult_op);
-    algorithm_time = omp_get_wtime() - algorithm_time;
-    fprintf(stdout, "Time was \"%04.8f\".. ms\n", algorithm_time);
-
-    fprintf(stdout, "Restarting calc with prepared block-wise omp algorithm:\n");
-    memset(mat_C.data, 0, mat_C.cols * mat_C.rows * sizeof(float));
-
-    algorithm_time = omp_get_wtime();
-    matrix_block_mul_omp(&mult_op);
-    algorithm_time = omp_get_wtime() - algorithm_time;
-    fprintf(stdout, "Time was \"%04.8f\".. ms\n", algorithm_time);
-
-    fprintf(stdout, "Restarting calc with vanilla algorithm:\n");
+    fprintf(stdout, "Starting calc with vanilla algorithm:\n");
     memset(mat_C.data, 0, mat_C.cols * mat_C.rows * sizeof(float));
 
     algorithm_time = omp_get_wtime();
     matrix_vanilla_mul(&mat_A, &mat_B, &mat_C);
     algorithm_time = omp_get_wtime() - algorithm_time;
-    fprintf(stdout, "Time was \"%04.8f\".. ms\n", algorithm_time);
+    fprintf(stdout, "Took \"%04.2f\" ms\n", algorithm_time);
 
-    fprintf(stdout, "Restarting calc with vanilla omp algorithm:\n");
+    fprintf(stdout, "Starting calc with parallel vanilla omp algorithm:\n");
     memset(mat_C.data, 0, mat_C.cols * mat_C.rows * sizeof(float));
 
     algorithm_time = omp_get_wtime();
     matrix_vanilla_mul_omp(&mat_A, &mat_B, &mat_C);
     algorithm_time = omp_get_wtime() - algorithm_time;
-    fprintf(stdout, "Time was \"%04.8f\".. ms\n", algorithm_time);
+    fprintf(stdout, "Took \"%04.2f\" ms\n", algorithm_time);
 
-    fprintf(stdout, "Restarting calc with all-in-one-function block-wise omp algorithm:\n");
+    fprintf(stdout, "Starting calc with prepared blocked algorithm:\n");
+
+    algorithm_time = omp_get_wtime();
+    matrix_block_mul(&mult_op);
+    algorithm_time = omp_get_wtime() - algorithm_time;
+    fprintf(stdout, "Took \"%04.2f\" ms\n", algorithm_time);
+
+    fprintf(stdout, "Starting calc with parallel prepared blocked omp algorithm:\n");
+    memset(mat_C.data, 0, mat_C.cols * mat_C.rows * sizeof(float));
+
+    algorithm_time = omp_get_wtime();
+    matrix_block_mul_omp(&mult_op);
+    algorithm_time = omp_get_wtime() - algorithm_time;
+    fprintf(stdout, "Took \"%04.2f\" ms\n", algorithm_time);
+
+    fprintf(stdout, "Starting calc with parallel inline blocked omp algorithm:\n");
     memset(mat_C.data, 0, mat_C.cols * mat_C.rows * sizeof(float));
 
     algorithm_time = omp_get_wtime();
     matrix_block_mul_inline_omp(&mat_A, &mat_B, &mat_C, args.row_split, args.col_split);
     algorithm_time = omp_get_wtime() - algorithm_time;
-    fprintf(stdout, "Time was \"%04.8f\".. ms\n", algorithm_time);
+    fprintf(stdout, "Took \"%04.2f\" ms\n", algorithm_time);
 
     // Cleanup
     close_matrix_mult(&mult_op);

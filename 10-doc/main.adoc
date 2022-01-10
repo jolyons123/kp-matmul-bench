@@ -26,6 +26,8 @@ Solutions for fast matrix-matrix multiplication already exist. For example there
 
 Because both the Go as well as the OpenMP implementation heavily rely on the memory layout and some of the core ideas of matrix-matrix multiplication the following chapter deals with some of the basics.
 
+IMPORTANT NOTES: Iterate over i -> if row count low then useless
+Use accumulator for "k-loop" or too many memory access -> slow
 == Matrix-multiplication basics
 
 Fig. XYZ depicts a basic matrix-matrix multiplication..

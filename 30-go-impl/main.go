@@ -22,7 +22,7 @@ func main() {
 	flag.Parse()
 
 	fmt.Printf("Creating matrices A and B with col/row count = %d "+
-		"and max init value = %d\nUsing block size of %d for blocked mm algorithm\n", *n, *max_float, *block_size)
+		"and max init value = %d\nUsing block size = %d for blocked mm algorithm\n", *n, *max_float, *block_size)
 
 	A := make([]float32, (*n)*(*n))
 	B := make([]float32, (*n)*(*n))
@@ -40,15 +40,15 @@ func main() {
 	ftime = makeTimestamp()
 	matrix.Mat_mul(A, B, C, *n)
 	ftime = makeTimestamp() - ftime
-	fmt.Printf("Took %d ms \n", ftime)
+	fmt.Printf("Took \"%d\" ms\n", ftime)
 
 	matrix.Mat_zero(C)
 
-	fmt.Println("Starting calc with vanilla parallel extern gofunc algorithm:")
+	fmt.Println("Starting calc with parallel vanilla extern gofunc algorithm:")
 	ftime = makeTimestamp()
 	matrix.Mat_mul_par(A, B, C, *n)
 	ftime = makeTimestamp() - ftime
-	fmt.Printf("Took %d ms \n", ftime)
+	fmt.Printf("Took \"%d\" ms\n", ftime)
 
 	matrix.Mat_zero(C)
 
@@ -56,15 +56,15 @@ func main() {
 	ftime = makeTimestamp()
 	matrix.Mat_mul_block(A, B, C, *n, *block_size)
 	ftime = makeTimestamp() - ftime
-	fmt.Printf("Took %d ms \n", ftime)
+	fmt.Printf("Took \"%d\" ms\n", ftime)
 
 	matrix.Mat_zero(C)
 
-	fmt.Println("Starting calc with blocked parallel extern gofunc algorithm:")
+	fmt.Println("Starting calc with parallel blocked extern gofunc algorithm:")
 	ftime = makeTimestamp()
 	matrix.Mat_mul_block_par(A, B, C, *n, *block_size)
 	ftime = makeTimestamp() - ftime
-	fmt.Printf("Took %d ms \n", ftime)
+	fmt.Printf("Took \"%d\" ms\n", ftime)
 }
 
 func makeTimestamp() int64 {

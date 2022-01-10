@@ -121,12 +121,13 @@ void matrix_block_mul(matrix_mult_operation* mult_op){
 void sub_matrix_mul(matrix_mult_operation* mul_op, sub_matrix_meta* A, sub_matrix_meta* B){
     for(int i = A->row_start; i < A->row_end; i++){
         for(int j = B->col_start; j < B->col_end; j++){
+            float acc = mul_op->mat_C->data[MIDX(i, j, mul_op->mat_C->cols)];
             for(int k = A->col_start; k < A->col_end; k++){
                 float val_left = mul_op->mat_A->data[MIDX(i, k, mul_op->mat_A->cols)];
                 float val_right = mul_op->mat_B->data[MIDX(k, j, mul_op->mat_B->cols)]; 
-                mul_op->mat_C->data[MIDX(i, j, mul_op->mat_C->cols)] += val_left * val_right;
-                //fprintf(stdout, "mul %1.2f with %1.2f equals %1.2f\n", val_left, val_right, mul_op->mat_C->data[MIDX(i, j, mul_op->mat_C->cols)]);
+                acc += val_left * val_right;
             }
+            mul_op->mat_C->data[MIDX(i, j, mul_op->mat_C->cols)] = acc;
         }
     }
 }
@@ -155,9 +156,11 @@ int matrix_block_mul_inline_omp(matrix* A, matrix* B, matrix* C, int row_split, 
                 // The remaining loops are for the regular matrix multiplication with the exception to minor changes due to block matrix multiplication
                 for(int i = i_; i < fminl(i_ + row_split, A->rows); i++){
                     for(int j = j_; j < fminl(j_ + row_split, B->cols); j++){
+                        float acc = C->data[MIDX(i, j, C->cols)];
                         for(int k = k_; k < fminl(k_ + col_split, A->cols); k++){
-                            C->data[MIDX(i, j, C->cols)] += A->data[MIDX(i, k, A->cols)] * B->data[MIDX(k, j, B->cols)];
+                            acc += A->data[MIDX(i, k, A->cols)] * B->data[MIDX(k, j, B->cols)];
                         }
+                        C->data[MIDX(i, j, C->cols)] = acc;
                     }
                 }
             }
@@ -180,9 +183,11 @@ int matrix_vanilla_mul(matrix* A, matrix* B, matrix* C){
 
     for(int i = 0; i < A->rows; i++){
         for(int j = 0; j < B->cols; j++){
+            float acc = C->data[MIDX(i, j, C->cols)];
             for(int k = 0; k < A->cols; k++){
-                C->data[MIDX(i, j, C->cols)] += A->data[MIDX(i, k, A->cols)] * B->data[MIDX(k, j, B->cols)];
+                acc += A->data[MIDX(i, k, A->cols)] * B->data[MIDX(k, j, B->cols)];
             }
+            C->data[MIDX(i, j, C->cols)] = acc;
         }
     }
 
