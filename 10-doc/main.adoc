@@ -32,4 +32,45 @@ Use accumulator for "k-loop" or too many memory access -> slow
 
 Fig. XYZ depicts a basic matrix-matrix multiplication..
 
-== 
+==  Benchmarks
+C with OMP, Debug
+Creating matrix A with rows = 3000, cols = 3000 and B with rows = 3000, cols = 3000 and max init value = 10000
+Using block size = (50, 50) for blocked mm algorithm
+Starting calc with vanilla algorithm:
+Took "145.48" ms
+Starting calc with parallel vanilla omp algorithm:
+Took "23.27" ms
+Starting calc with prepared blocked algorithm:
+Took "98.49" ms
+Starting calc with parallel prepared blocked omp algorithm:
+Took "17.44" ms
+Starting calc with parallel inline blocked omp algorithm:
+Took "47.85" ms
+
+C with OMP, Release
+Creating matrix A with rows = 3000, cols = 3000 and B with rows = 3000, cols = 3000 and max init value = 10000
+Using block size = (50, 50) for blocked mm algorithm
+Starting calc with vanilla algorithm:
+Took "64.56" ms
+Starting calc with parallel vanilla omp algorithm:
+Took "13.80" ms
+Starting calc with prepared blocked algorithm:
+Took "15.94" ms
+Starting calc with parallel prepared blocked omp algorithm:
+Took "2.45" ms
+Starting calc with parallel inline blocked omp algorithm:
+Took "3.77" ms
+
+Go with goroutine:
+Creating matrices A and B with col/row count = 3000 and max init value = 10000
+Using block size = 50 for blocked mm algorithm
+Starting calc with vanilla algorithm:
+Took "41753" ms
+Starting calc with parallel vanilla extern gofunc algorithm:
+Took "4354" ms
+Starting calc with blocked algorithm:
+Took "27462" ms
+Starting calc with parallel blocked extern gofunc algorithm:
+Took "5228" ms
+
+In C OPTIMIZATION is very important! Does it automatically arrange memory of B so it acts like it was transposed?
