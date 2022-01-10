@@ -16,7 +16,7 @@ The C programming language exists since 1972 and was one of the most often used 
 
 During the past years multi-core programming became more popular because new cpus tend to have more cores than older ones. The image below shows that, starting from around 2005, the number of physcical cores is constantly rising whereas the increase in frequency stops.
 
-image::parallel-trend.png[Concurrency, 400, align="center"]
+image::parallel-trend.png[static, 400, align="center"]
 
 As such programs extensively profit from concurrent programming. Because C is relatively old it does not come with concurrency in mind: One has to use the operating systems' features in order to implement parallel logic. While this is not bad by itself there is still the need of managing multiply threads, which can be annoying at times or can lead to mistakes.
 
@@ -41,17 +41,17 @@ Use accumulator for "k-loop" or too many memory access -> slow
 
 The figure below depicts a basic matrix-matrix multiplication.
 
-image::mm.svg[static,400,align="center"]
+image::mm.svg[static, width=90%, align="center"]
 
 Let us denote the left hand matrix as A, the right hand matrix as B and the result matrix as C. Then, in order to multiply both matrices together, the column count of A has to be equal to the row count of B. This is the case because the rows of A are multiplied with the columns of B element-wise, as the green arrow in the above picture shows. The result is stored in the destination matrix C using the row index of A and column index of B. 
 
 Therefore each combination of a row of A and a column of B results in a unique index for matrix C. Because of that there is no race condition when constructing a correct loop order and one can make use of parallelization.
 
-However care has to be taken when choosing the axis to parallelize. For example if matrix A had 1000000 rows and 2 columns it would make no sense to parallelize the column computations of A as most modern computers are capable to launch more than 2 real parallel threads. On the other hand special treatment is needed when launching more threads than physically possible. This is often realized by a software threads and a scheduler. We will see later that launching a large amount of goroutines is relatively efficient in Golang.
+However care has to be taken when choosing the axis to parallelize. For example if matrix A had 1000000 rows and 2 columns it would make no sense to parallelize the column computations of A as most modern computers are capable to launch more than 2 real parallel threads. On the other hand special treatment is needed when launching more threads than physically possible. This is often realized by a software threads and a scheduler. We will later see that Golang is relatively efficient in comparison to C and OpenMP when launching many short-lived concurrent tasks.
 
 Other than that there exists the approach of partitioning matrices into blocks before performing multiplication. The figure below shows how this can look like.
 
-image::mm-block.svg[static, 400, align="center"]
+image::mm-block.svg[static, width=90%, align="center"]
 
 The matrix is split into chunks of desired __block size__ whenever possible. The constraints for dimensions of the resulting block-matrices are the same as the dimension constraints when performing a vanilla matrix-matrix multiplication. As far as the multiplication with rows of A and columns of B is concerned the rules stay the same. At the end of the matrix-matrix multiplication with a row of block-matrix A and a column of block-matrix B the results are added together. This time a matrix-matrix addition is performed to sum up the results into a result sub-matrix. It is advisable not to store the temporary results of sub-matrix multiplications but rather to add on top of the existing values in C. This will be later showed in the example code.
 
@@ -65,7 +65,68 @@ As far as performance is concerned there is a simple yet effective way to speed 
 The next chapter will discuss the C implementation which uses the OpenMP library.
 
 == Implementation in C and OpenMP
-// cmake, c99 vs c89, compiler warns important, opt important, race conditions not possible in our impl
+The C project is divided into the following components:
+
+* cmake configuration
+* custom matrix library
+* custom argument parser
+* main benchmark function
+* unit tests
+
+Because configuring OpenMP is not so straightforward the steps required to enable OpenMP are explained in the following section.
+
+=== Configuring OpenMP for C ===
+The cmake configuration allows for automatic makefile generation, build, testing and works with multiple compilers. Therefore it allows easy cross-plattform development and saves a lot of time during the build process. For this particular case the project was tested with the gcc compiler on Linux and the gcc MinGW version on Windows.
+
+In order to get OpenMP to work the compiler has to support it. In the case of the above mentioned compilers a flag during compile time is sufficient. The required header files and library can be easily linked against using cmake. The following code snippet shows how this is done:
+
+[source,cmake,linenums]
+----
+find_package(OpenMP REQUIRED)
+...
+add_compile_options(-Wall -Wextra -Wpedantic -Wunknown-pragmas -Werror -fopenmp)
+...
+add_library(matrix matrix/matrix.c)
+target_link_libraries(matrix PUBLIC OpenMP::OpenMP_CXX m)
+...
+set_property(TARGET matrix PROPERTY C_STANDARD 99)
+----
+
+The above cmake configuration links the target against the required OpenMP library and a math library. It further adds some compiler-specifig flags. The __-fopenmp__ flag enables OpenMP support at runtime. This is crucial because even though the library is linked and the header files can be found at compile time, the program is only translated to use the concurrency features of OpenMP if the flag is given.
+
+Even worse is the fact that there is no warning or error at all when building a program which uses OpenMP directives but does not build with the __-fopenmp__ flag. This is why the __-Wall -Wunknown-pragmas -Werror__ options are important. By using those options the compiler throws an error at compile time when the source code is using OpenMP directives (which are #pragma's) but does not build with the __-fopenmp__ flag.
+
+The last thing to consider is to define the C-standard because OpenMP directives differ accross different C-standards. For example the following code is compatible with the C99 standard but not with the C89 standard:
+
+[source,c,linenums]
+----
+#pragma omp parallel for
+for(int i = 0; i < n; i++){
+    // do stuff
+}
+----
+
+The equivalent code using the syntax which is supported by the C89-standard is:
+
+[source,c,linenums]
+----
+#pragma omp parallel
+{
+    int i;
+    #pragma omp for
+    for(i = 0; i < n; i++){
+        // do stuff
+    }
+}
+----
+
+Again, in the case of wrong syntax, no warning is thrown when compiling without the __-Wunknown-pragmas__ flag.
+
+The rest of the cmake files contain setup code which allows easy unit testing and code coverage generation using __gcovr__ and the __catch2__ library.
+
+The next chapter will show how parallel matrix-matrix multiplication can be implemented with OpenMP.
+
+// opt important, race conditions not possible in our impl
 // autosync/wait for all threads to finish
 // testing with c++ framework, needs a lot of setup for coverage etc
 // All tested algorithm modes (listing?)
