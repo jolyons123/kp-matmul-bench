@@ -8,8 +8,8 @@ import (
 )
 
 func main() {
-	n := 1000
-	block_size := 20
+	n := 3000
+	block_size := 50
 	maxFloat := 10000
 	A := make([]float32, n*n)
 	B := make([]float32, n*n)
@@ -24,33 +24,36 @@ func main() {
 
 	var ftime int64
 	fmt.Println("Starting calc with vanilla algorithm:")
-	ftime = time.Now().UnixMilli()
+	ftime = makeTimestamp()
 	matrix.Mat_mul(A, B, C, n)
-	ftime = time.Now().UnixMilli() - ftime
+	ftime = makeTimestamp() - ftime
 	fmt.Printf("Took %d ms \n", ftime)
 
 	matrix.Mat_zero(C)
 
 	fmt.Println("Starting calc with vanilla parallel extern gofunc algorithm:")
-	ftime = time.Now().UnixMilli()
+	ftime = makeTimestamp()
 	matrix.Mat_mul_par(A, B, C, n)
-	ftime = time.Now().UnixMilli() - ftime
+	ftime = makeTimestamp() - ftime
 	fmt.Printf("Took %d ms \n", ftime)
 
 	matrix.Mat_zero(C)
 
 	fmt.Println("Starting calc with blocked algorithm:")
-	ftime = time.Now().UnixMilli()
+	ftime = makeTimestamp()
 	matrix.Mat_mul_block(A, B, C, n, block_size)
-	ftime = time.Now().UnixMilli() - ftime
+	ftime = makeTimestamp() - ftime
 	fmt.Printf("Took %d ms \n", ftime)
 
 	matrix.Mat_zero(C)
 
 	fmt.Println("Starting calc with blocked parallel extern gofunc algorithm:")
-	ftime = time.Now().UnixMilli()
+	ftime = makeTimestamp()
 	matrix.Mat_mul_block_par(A, B, C, n, block_size)
-	ftime = time.Now().UnixMilli() - ftime
+	ftime = makeTimestamp() - ftime
 	fmt.Printf("Took %d ms \n", ftime)
+}
 
+func makeTimestamp() int64 {
+	return time.Now().UnixNano() / int64(time.Millisecond)
 }
