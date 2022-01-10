@@ -41,18 +41,34 @@ Use accumulator for "k-loop" or too many memory access -> slow
 
 The figure below depicts a basic matrix-matrix multiplication.
 
-image::mm.svg[static,300,align="center"]
+image::mm.svg[static,400,align="center"]
 
-Let us denote the left hand matrix as A and the right hand matrix as B. Then, in order to multiply both matrices together, the column count of A has to be equal to the row count of B
+Let us denote the left hand matrix as A, the right hand matrix as B and the result matrix as C. Then, in order to multiply both matrices together, the column count of A has to be equal to the row count of B. This is the case because the rows of A are multiplied with the columns of B element-wise, as the green arrow in the above picture shows. The result is stored in the destination matrix C using the row index of A and column index of B. 
 
+Therefore each combination of a row of A and a column of B results in a unique index for matrix C. Because of that there is no race condition when constructing a correct loop order and one can make use of parallelization.
 
-// BLOCKS explain
-// All tested algorithm modes (listing?)
+However care has to be taken when choosing the axis to parallelize. For example if matrix A had 1000000 rows and 2 columns it would make no sense to parallelize the column computations of A as most modern computers are capable to launch more than 2 real parallel threads. On the other hand special treatment is needed when launching more threads than physically possible. This is often realized by a software threads and a scheduler. We will see later that launching a large amount of goroutines is relatively efficient in Golang.
 
-// Chap. Implementation in C and OpenMP
+Other than that there exists the approach of partitioning matrices into blocks before performing multiplication. The figure below shows how this can look like.
+
+image::mm-block.svg[static, 400, align="center"]
+
+The matrix is split into chunks of desired __block size__ whenever possible. The constraints for dimensions of the resulting block-matrices are the same as the dimension constraints when performing a vanilla matrix-matrix multiplication. As far as the multiplication with rows of A and columns of B is concerned the rules stay the same. At the end of the matrix-matrix multiplication with a row of block-matrix A and a column of block-matrix B the results are added together. This time a matrix-matrix addition is performed to sum up the results into a result sub-matrix. It is advisable not to store the temporary results of sub-matrix multiplications but rather to add on top of the existing values in C. This will be later showed in the example code.
+
+Summing it up the major differences are:
+
+* The element-wise multiplication of sub-matrices is now a classic matrix-matrix multiplication
+* Each sub-matrix multiplication has to take existing values in target matrix into account in order to bypass the matrix-matrix addition requirement
+
+As far as performance is concerned there is a simple yet effective way to speed up the multiplication of matrices which requires to transpose matrix B. This way the memory layout of matrix B changes so that the access of a column of B is more cache friendly. For the sake of simplicity and because the project focuses on concurrency benchmarks rather than raw performance this optimization step was skipped.
+
+The next chapter will discuss the C implementation which uses the OpenMP library.
+
+== Implementation in C and OpenMP
 // cmake, c99 vs c89, compiler warns important, opt important, race conditions not possible in our impl
 // autosync/wait for all threads to finish
 // testing with c++ framework, needs a lot of setup for coverage etc
+// All tested algorithm modes (listing?)
 
 // Chap. Implementation in Go
 // easy out of the box
