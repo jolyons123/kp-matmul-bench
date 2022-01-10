@@ -12,9 +12,13 @@ Version 0.1, 09.01.2022
 
 == Introduction
 
-The C programming language exists since 1972 and is in one of the most often used programming languages in the past 50 years. It is imperative, statically typed and compiles into native cpu instructions. By design it allows low-level access to hardware and memory and thus various operating systems or IoT Devices are programmed with C.
+The C programming language exists since 1972 and was one of the most often used programming languages in the past 50 years. It is imperative, statically typed and compiles into native cpu instructions. By design it allows low-level access to hardware and memory and thus various operating systems or IoT Devices are programmed with C.
 
-During the past years multi-core programming became more popular because new cpus tend to have more cores than older ones. As such programs extensively profit from concurrent programming. Because C is relatively old it does not come with concurrency in mind: One has to use the operating systems' features in order to implement parallel logic. While this is not bad by itself there is still the need of managing multiply threads, which can be annoying at times or can lead to mistakes.
+During the past years multi-core programming became more popular because new cpus tend to have more cores than older ones. The image below shows that, starting from around 2005, the number of physcical cores is constantly rising whereas the increase in frequency stops.
+
+image::parallel-trend.png[Concurrency, 400, align="center"]
+
+As such programs extensively profit from concurrent programming. Because C is relatively old it does not come with concurrency in mind: One has to use the operating systems' features in order to implement parallel logic. While this is not bad by itself there is still the need of managing multiply threads, which can be annoying at times or can lead to mistakes.
 
 OpenMP is a library which was first released in 1997 for the Fortran programming language. The C version of OpenMP was released one year later. It comes in mind of parallelizing classic __loops__ where the amount of iterations is already known in the beginning. Implementing OpenMP is theoretically fairly easy but comes with many traps as we will see later.
 
@@ -26,15 +30,40 @@ These days matrix multiplications are very common, for example in game rendering
 
 Solutions for fast matrix-matrix multiplication already exist. For example there is Basic Linear Algebra Subprograms (BLAS) which can be used in C in order to make use of an efficient matrix-matrix multiplication. Other than that there is __nvidia cuda__ or __amd rocm__ which allow relocating concurrent workloads on gpus which are highly optimized for such tasks.
 
-Because both the Go as well as the OpenMP implementation heavily rely on the memory layout and some of the core ideas of matrix-matrix multiplication the following chapter deals with some of the basics.
+As such the proposed implementation does not primarily focus on outperforming those solutions. Instead the main goal is to compare the benefits gained by parallelizing a vanilla or blocked matrix-matrix multiplication and showing pros and cons in both C/OpenMP and Go.
+
+Because both implementations would extensively make profit of easy optimizations the memory layout and some of the core ideas of matrix-matrix multiplication are explained in the following chapter.
 
 IMPORTANT NOTES: Iterate over i -> if row count low then useless
 Use accumulator for "k-loop" or too many memory access -> slow
+
 == Matrix-multiplication basics
 
-Fig. XYZ depicts a basic matrix-matrix multiplication..
+The figure below depicts a basic matrix-matrix multiplication.
 
-==  Benchmarks
+image::mm.svg[static,300,align="center"]
+
+Let us denote the left hand matrix as A and the right hand matrix as B. Then, in order to multiply both matrices together, the column count of A has to be equal to the row count of B
+
+
+// BLOCKS explain
+// All tested algorithm modes (listing?)
+
+// Chap. Implementation in C and OpenMP
+// cmake, c99 vs c89, compiler warns important, opt important, race conditions not possible in our impl
+// autosync/wait for all threads to finish
+// testing with c++ framework, needs a lot of setup for coverage etc
+
+// Chap. Implementation in Go
+// easy out of the box
+// dont need to control amount of goroutines because fast
+// wg.Sync needed 
+// for sake of simplicity only quadratic matrices, but same applies to other (as seen in c project)
+// testing relatively easy and nice
+
+==  Benchmark results
+
+// Talk about default used block size, mat dimensions
 [cols=5*,options=header]
 |===
 |*Algorithm Type*
