@@ -1,4 +1,4 @@
-= Comparing Golang conrurrent programming with OpenMP in C: Block-wise matrix-matrix multiplication benchmark
+= Comparing Golang Concurrent Programming with OpenMP in C: Block-wise Matrix-matrix Multiplication Benchmark
 John Lyons(c) 2022
 Version 0.1, 09.01.2022
 :sectnums:
@@ -18,7 +18,9 @@ During the past years multi-core programming became more popular because new cpu
 
 OpenMP is a library which was first released in 1997 for the Fortran programming language. The C version of OpenMP was released one year later. It comes in mind of parallelizing classic __loops__ where the amount of iterations is already known in the beginning. Implementing OpenMP is theoretically fairly easy but comes with many traps as we will see later.
 
-On the other hand __Golang__ is a new language released in 2009 by Rob Pike et. al. ......
+On the other hand __Golang__ is a new language released in 2009 by Rob Pike et. al.. It aims to replace C/C++ in general purpose settings and as such brings some improvements and changes compared to C. For example it contains a garbage collector which frees unused memory similar to java. It comes with concurrency in mind by providing such called __goroutines__ which allow easy implementation of parallel programming paradigms. On the other hand Golang inherits some of the core concepts of C such as pointers.
+
+When it comes to comparing concurrent programming in both Golang and C the matrix-matrix multiplication is a perfect benchmark because it almost always allows for spawning many parallel threads or thread-like constructs.
 
 These days matrix multiplications are very common, for example in game rendering or machine learning scenarios. Speaking of machine learning neural models are constantly gaining more and more popularity. Those models have can have a large amount of parameters and as such training those models is computationally expensive. Training data are being loaded into matrices and those are multiplied with matrices representing the neural model's parameters across all layers. 
 
@@ -33,21 +35,54 @@ Use accumulator for "k-loop" or too many memory access -> slow
 Fig. XYZ depicts a basic matrix-matrix multiplication..
 
 ==  Benchmarks
-LAPTOP:
-C with OMP, Debug
-Creating matrix A with rows = 3000, cols = 3000 and B with rows = 3000, cols = 3000 and max init value = 10000
-Using block size = (50, 50) for blocked mm algorithm
-Starting calc with vanilla algorithm:
-Took "145.48" ms
-Starting calc with parallel vanilla omp algorithm:
-Took "23.27" ms
-Starting calc with prepared blocked algorithm:
-Took "98.49" ms
-Starting calc with parallel prepared blocked omp algorithm:
-Took "17.44" ms
-Starting calc with parallel inline blocked omp algorithm:
-Took "47.85" ms
+[cols=5*,options=header]
+|===
+|*Algorithm Type*
+|*Golang on Windows PC*
+|*C with OpenMP on Windows PC*
+|*Golang on Linux Laptop*
+|*C with OpenMP on Linux Laptop*
 
+|*Vanilla*
+|150071ms
+|72420ms
+|41753ms
+|64560ms
+
+|*Vanilla parallel*
+|27578ms
+|18920ms
+|4354ms
+|13800ms
+
+|*Blocked*
+|32884ms
+|-
+|27462ms
+|-
+
+|*Blocked parallel*
+|6676ms
+|3530ms
+|5228ms
+|3770ms
+
+|*Prepared blocked*
+|-
+|16720ms
+|-
+|15940ms
+
+|*Prepared blocked parallel*
+|-
+|2090ms
+|-
+|2450ms
+|===
+
+////
+BENCHMARK RESULTS:
+LAPTOP:
 C with OMP, Release
 Creating matrix A with rows = 3000, cols = 3000 and B with rows = 3000, cols = 3000 and max init value = 10000
 Using block size = (50, 50) for blocked mm algorithm
@@ -89,4 +124,17 @@ Took "2.09" ms
 Starting calc with parallel inline blocked omp algorithm:
 Took "3.53" ms
 
+Go with goroutine:
+Creating matrices A and B with col/row count = 3000 and max init value = 10000
+Using block size = 50 for blocked mm algorithm
+Starting calc with vanilla algorithm:
+Took "150071" ms
+Starting calc with parallel vanilla extern gofunc algorithm:
+Took "27578" ms
+Starting calc with blocked algorithm:
+Took "32884" ms
+Starting calc with parallel blocked extern gofunc algorithm:
+Took "6676" ms
+
 In C OPTIMIZATION is very important! Does it automatically arrange memory of B so it acts like it was transposed?
+////
