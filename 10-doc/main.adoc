@@ -164,8 +164,60 @@ The last important thing is to accumulate the existing values in the target matr
 Finally the implementation of OpenMP is straightforward once the initial configuration step is done. The `#pragma omp parallel for` directive tells the compiler to parallelize the following loop. The executed for-loop also blocks at the end until all of the workers have finished. In addition to that it is possible to define how many threads OpenMP should use. This can be done with the help of environment variables, compiler flags or function calls during runtime and is also relatively easy.
 
 As a part of this experiment the author decided to implement another version of the parallel blocked matrix-matrix multiplication algorithm where the `fminl` function is not used and the boundary indexes of each sub-matrix are pre-computed. This may be useful in scenarios where the dimensions for all upcoming matrix-matrix multiplications are known so only one step for preperation is necessary. The created custom matrix library contains functions for preparing, performing and cleaning up such an operation. Because showing this approach would run out of scope please refer to the implementation of the custom matrix library or its usage in the main file in this repository.
+
+=== Tests
+
+Testing is done using __cmake__ and the __catch2__ framework. __cache2__ is a C{plus}{plus} testing framework and allows for writing unit tests for both C and C{plus}{plus} by using special preprocessor macros.
+
+The following code snipped shows how all of the matrix-matrix multiplication functions are tested:
+
+[source,c,linenums]
+----
+TEST_CASE( "Matrix-matrix multiplication", "[matrix]" ) {
+    int n = 4;
+    int block_size = 2;
+    float a[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+    float b[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+    float res[] = {56, 62, 68, 74, 152, 174, 196, 218, 248, 286, 324, 362, 344, 398, 452, 506};
+
+    matrix mat_A = create_matrix(n, n);
+    matrix mat_B = create_matrix(n, n);
+    matrix mat_C = create_matrix(n, n);
+
+    memcpy(mat_A.data, a, sizeof(a));
+    memcpy(mat_B.data, b, sizeof(b));
+
+    SECTION( "Parallel vanilla omp matrix-matrix multiplication" ) {
+        memset(mat_C.data, 0, sizeof(res));
+        matrix_vanilla_mul_omp(&mat_A, &mat_B, &mat_C);
+
+        for(int i = 0; i < n*n; i++){
+            REQUIRE( mat_C.data[i] == res[i] );
+        }
+    }
+
+    SECTION( "Parallel prepared blocked omp matrix-matrix multiplication" ) {
+        matrix_mult_operation mult_op;
+        prepare_matrix_block_mult(&mat_A, &mat_B, &mat_C, block_size, block_size, &mult_op);
+
+        memset(mat_C.data, 0, sizeof(res));
+        matrix_block_mul_omp(&mult_op);
+
+        for(int i = 0; i < n*n; i++){
+            REQUIRE( mult_op.mat_C->data[i] == res[i] );
+        }
+
+        close_matrix_mult(&mult_op);
+    }
+
+    // more tests...
+
+    free_matrix(&mat_A);
+    free_matrix(&mat_B);
+    free_matrix(&mat_C);
+}
+----
 // opt important
-// autosync/wait for all threads to finish
 // All tested algorithm modes (listing?)
 
 // Chap. Implementation in Go

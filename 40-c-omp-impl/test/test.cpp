@@ -137,3 +137,26 @@ TEST_CASE( "Matrix-matrix multiplication", "[matrix]" ) {
     free_matrix(&mat_B);
     free_matrix(&mat_C);
 }
+
+TEST_CASE( "Matrix initialization", "[matrix]" ) {
+    int n = 4;
+    matrix mat_A = create_matrix(n, n);
+
+    SECTION( "Random initialization with maximum value" ) {
+        matrix_random_init(&mat_A, 10.0f);
+
+        for(int i = 0; i < n*n; i++){
+            REQUIRE( mat_A.data[i] < 10.0f );
+        }
+    }
+
+    SECTION( "Initialize matrix by using the index as the value" ) {
+        matrix_simple_init(&mat_A);
+
+        for(int i = 0; i < n*n; i++){
+            REQUIRE( mat_A.data[i] == (float)i );
+        }
+    }
+
+    free_matrix(&mat_A);
+}

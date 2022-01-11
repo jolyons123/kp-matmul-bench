@@ -23,22 +23,17 @@ include_directories(${PROJECT_SOURCE_DIR})
 # Compile options #
 ###################
 add_compile_options(-Wall -Wextra -Wpedantic -Wunknown-pragmas -Werror -fopenmp)
-#set_property(TARGET all PROPERTY C_STANDARD 99)
-
 
 ####################
 # Build executable #
 ####################
-add_library(matrix matrix/matrix.c)
+add_library(matrix matrix/matrix.c format/format.c)
 target_link_libraries(matrix PUBLIC OpenMP::OpenMP_CXX m)
 set_property(TARGET matrix PROPERTY C_STANDARD 99)
 
 add_executable(app main.c args/args.c)
 target_link_libraries(app PUBLIC matrix)
 set_property(TARGET app PROPERTY C_STANDARD 99)
-#target_link_libraries(app PRIVATE OpenMP::OpenMP_CXX)
-#target_compile_options(app PRIVATE -Wall -Wextra -Wpedantic -Wunknown-pragmas -Werror -fopenmp)
-#set_property(TARGET app PROPERTY C_STANDARD 99)
 
 ###################
 # Test executable #
@@ -46,8 +41,6 @@ set_property(TARGET app PROPERTY C_STANDARD 99)
 include_directories(${PROJECT_SOURCE_DIR}/test)
 add_executable(tests test/test.cpp)
 target_link_libraries(tests PUBLIC Catch2::Catch2WithMain matrix)
-#target_link_libraries(tests PRIVATE Catch2::Catch2WithMain OpenMP::OpenMP_CXX)
-#target_compile_options(tests PRIVATE -Wall -Wextra -Wpedantic -Wunknown-pragmas -Werror -fopenmp)
 
 # modules for running tests and coverage
 list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras ${PROJECT_SOURCE_DIR}/cmake-modules)
@@ -55,8 +48,14 @@ list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras ${PROJECT_SOURCE_DIR}/
 include(CTest)
 include(Catch)
 catch_discover_tests(tests)
+
+#################
+# Code coverage #
+#################
+# Uncomment the following lines to enable code coverage with gcovr
+# The find_program command has to be adjusted in order to find the gcovr location
+
 #include(CodeCoverage)
-# Override program path to gcovr
 #find_program( GCOVR_PATH gcovr PATHS "C:/ProgramData/Miniconda3/Scripts")
 
 #append_coverage_compiler_flags()
@@ -64,4 +63,4 @@ catch_discover_tests(tests)
 #    NAME coverage
 #    EXECUTABLE tests
 #    BASE_DIRECTORY "${PROJECT_SOURCE_DIR}"
-#    EXCLUDE "build/*" "test/*") 
+#    EXCLUDE "build/*" "test/*" "args/*" "format/*" "main.c") 
