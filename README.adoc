@@ -9,6 +9,4 @@ Version 0.1, 11.01.2022
 
 == About
 
-The C with __OpenMP__ project can be found in the xref:40-c-omp-impl[40-c-omp-impl] directory whereas the __Golang__ implementation can be found in the xref:30-go-impl[30-go-impl] directory.
-
-The documentation can be found in the xref:10-doc[10-doc] directory.
+This repository holds the C with __OpenMP__ and __Golang__ implementation of a parallelized blocked matrix-matrix multiplication benchmark. In addition to that the documentation can be directly viewed in the `10-doc` folder.
