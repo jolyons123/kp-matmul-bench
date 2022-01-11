@@ -1,0 +1,14 @@
+= Comparing Golang Concurrent Programming with OpenMP in C: Block-wise Matrix-matrix Multiplication Benchmark
+John Lyons(c) 2022
+Version 0.1, 11.01.2022
+:sectnums:                               
+                                                
+:description: Block-wise Matrix-matrix Multiplication in Golang and C with OpenMP
+:keywords: matrix multiplication, Golang, go, C, OpenMP, concurrency, parallelism                             
+:imagesdir: ./figures                                                 
+
+== About
+
+The C with __OpenMP__ project can be found in the xref:40-c-omp-impl[40-c-omp-impl] directory whereas the __Golang__ implementation can be found in the xref:30-go-impl[30-go-impl] directory.
+
+The documentation can be found in the xref:10-doc[10-doc] directory.
