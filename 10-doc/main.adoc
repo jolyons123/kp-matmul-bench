@@ -92,9 +92,9 @@ target_link_libraries(matrix PUBLIC OpenMP::OpenMP_CXX m)
 set_property(TARGET matrix PROPERTY C_STANDARD 99)
 ----
 
-The above cmake configuration links the target against the required OpenMP library and a math library. It further adds some compiler-specifig flags. The __-fopenmp__ flag enables OpenMP support at runtime. This is crucial because even though the library is linked and the header files can be found at compile time, the program is only translated to use the concurrency features of OpenMP if the flag is given.
+The above cmake configuration links the target against the required OpenMP library and a math library. It further adds some compiler-specifig flags. The `-fopenmp` flag enables OpenMP support at runtime. This is crucial because even though the library is linked and the header files can be found at compile time, the program is only translated to use the concurrency features of OpenMP if the flag is given.
 
-Even worse is the fact that there is no warning or error at all when building a program which uses OpenMP directives but does not build with the __-fopenmp__ flag. This is why the __-Wall -Wunknown-pragmas -Werror__ options are important. By using those options the compiler throws an error at compile time when the source code is using OpenMP directives (which are #pragma's) but does not build with the __-fopenmp__ flag.
+Even worse is the fact that there is no warning or error at all when building a program which uses OpenMP directives but does not build with the `-fopenmp` flag. This is why the `-Wall -Wunknown-pragmas -Werror` options are important. By using those options the compiler throws an error at compile time when the source code is using OpenMP directives (which are #pragma's) but does not build with the `-fopenmp` flag.
 
 The last thing to consider is to define the C-standard because OpenMP directives differ accross different C-standards. For example the following code is compatible with the C99 standard but not with the C89 standard:
 
@@ -120,15 +120,52 @@ The equivalent code using the syntax which is supported by the C89-standard is:
 }
 ----
 
-Again, in the case of wrong syntax, no warning is thrown when compiling without the __-Wunknown-pragmas__ flag.
+Again, in the case of wrong syntax, no warning is thrown when compiling without the `-Wunknown-pragmas` flag.
 
 The rest of the cmake files contain setup code which allows easy unit testing and code coverage generation using __gcovr__ and the __catch2__ library.
 
 The next chapter will show how parallel matrix-matrix multiplication can be implemented with OpenMP.
 
-// opt important, race conditions not possible in our impl
+=== Matrix-matrix multiplication with OpenMP
+
+As already shown in the second chapter parralelization of the vanilla or blocked matrix-matrix multiplication is possible because there is no race condition at runtime when correctly building the loop construct.
+
+The following code shows how the block-wise matrix-matrix multiplication is implemented in C and OpenMP:
+
+[source,c,linenums]
+----
+// The following three loops are iterating over the block matrices
+#pragma omp parallel for
+for(int i_ = 0; i_ < A->rows; i_ += row_split){
+    // Note: we are going in row_split steps along the columns of B because the split along rows of A has to be equal to the split along columns of B
+    for(int j_ = 0; j_ < B->cols; j_ += row_split){
+        for(int k_ = 0; k_ < A->cols; k_ += col_split){
+            // The remaining loops are for the regular matrix multiplication with the exception to minor changes due to block matrix multiplication
+            for(int i = i_; i < fminl(i_ + row_split, A->rows); i++){
+                for(int j = j_; j < fminl(j_ + row_split, B->cols); j++){
+                    float acc = C->data[MIDX(i, j, C->cols)];
+                    for(int k = k_; k < fminl(k_ + col_split, A->cols); k++){
+                            acc += A->data[MIDX(i, k, A->cols)] * B->data[MIDX(k, j, B->cols)];
+                    }
+                    C->data[MIDX(i, j, C->cols)] = acc;
+                }
+            }
+        }
+    }
+}
+----
+
+The basic idea is to iterate over the blocks of the block matrix the same way as iterating over a regular matrix. `row_split` and `col_split` define the size of one block and that is why those variables are used as step size in the outer three loops.
+
+Furthermore when two sub-matrices have to be multiplied the regular matrix-matrix multiplication loop can be used. The start indexes of `i, j, k` are given by the start indexes of the corresponding sub-matrix `i_, j_, k_`. The maximum value for each index `i, j, k` is given by the minimum of its corresponding sub-matrix plus the corresponding block size (`row_split` or `col_split`) and the total row or column length. The minimum has to be used because the last remaining sub-matrix in a particular axis may have a different dimension than the other ones. Consider a quadratic 5x5 matrix splitted into sub-matrices with a block size of 2 (`row_split` and `col_split` would be equal). As a consequence the last sub-matrix for each axis will have a dimension of [1,3] or [3,1] whereas all the other ones will have a dimension of [2,2].
+
+The last important thing is to accumulate the existing values in the target matrix before entering the `k-loop`. This is the case because each result of a sub-matrix and sub-matrix multiplication has to be summed up at the end of the `k_-loop` and written to the corresponding target sub-matrix. Because the `k_-loop` (which is responsible for the "element-wise" sub-matrix and sub-matrix multiplication) is never ran in parallel, all sub-matrix and sub-matrix multiplications for a particular row `i_` and column `j_` are run sequantially. As such there is no race condition for accessing the value of `C->data[MIDX(i, j, C->cols)]` and writing to it after the regular matrix-matrix multiplication.
+
+Finally the implementation of OpenMP is straightforward once the initial configuration step is done. The `#pragma omp parallel for` directive tells the compiler to parallelize the following loop. The executed for-loop also blocks at the end until all of the workers have finished. In addition to that it is possible to define how many threads OpenMP should use. This can be done with the help of environment variables, compiler flags or function calls during runtime.
+
+As a part of this experiment the author decided to implement another version of the parallel blocked matrix-matrix multiplication algorithm where the `fminl` function is not used and the boundary indexes of each sub-matrix are pre-computed. This may be useful in scenarios where the dimensions for all upcoming matrix-matrix multiplications are known so only one step for preperation is necessary. The created custom matrix library contains functions for preparing, performing and cleaning up such an operation. Because showing this approach would run out of scope please refer to the implementation of the custom matrix library or its usage in the main file in this repository.
+// opt important
 // autosync/wait for all threads to finish
-// testing with c++ framework, needs a lot of setup for coverage etc
 // All tested algorithm modes (listing?)
 
 // Chap. Implementation in Go
