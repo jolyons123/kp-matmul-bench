@@ -9,7 +9,7 @@ Version 0.1, 11.01.2022
 
 == How to Build
 
-Install the following tools:app-name: 
+Install the following tools:
 
 * __gcc__ or any other compiler that supports __OpenMP__
 * __cmake__
@@ -17,7 +17,7 @@ Install the following tools:app-name:
 
 If you want to support coverage then uncomment the last lines in CMakeLists.txt and modify the `find_program` to include the path to your __gcovr__ executable.
 
-Open a shell and switch to the repository folder. Replace `<GENERATOR>` with the appropriate makefile generator compatible with your chosen compiler (`MinGW Makefiles` should work with gcc and MinGW). Replace `<PATH-TO-C-COMPILER>` and `<PATH-TO-CPP-COMPILER>` with the absolute paths to your chosen C and {cpp} compiler. When not using a bash-like shell, replace $(pwd) with the absolute path to the C project.
+Open a shell and switch to the repository folder. Replace `<GENERATOR>` with the appropriate makefile generator compatible with your chosen compiler (`MinGW Makefiles` should work with `gcc` and `MinGW`). Replace `<PATH-TO-C-COMPILER>` and `<PATH-TO-CPP-COMPILER>` with the absolute paths to your chosen C and {cpp} compiler. When not using a bash-like shell, replace `$(pwd)` with the absolute path to the C project.
 
 [source,bash]
 ----
@@ -30,3 +30,16 @@ Build:
 ----
 cmake --build $(pwd)/build --config Release --target all -j 14 --
 ----
+
+== How to Test
+
+After building execute the following command in the root folder of the project:
+
+[source,bash]
+----
+cmake --build $(pwd)/build --config Release --target all -j 14 --
+----
+
+== How to Run
+
+By running the built executable in your shell it will perform a benchmark with default parameters. In order learn the parameters run the program with the `-h` argument which will display usage.
