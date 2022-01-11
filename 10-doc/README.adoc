@@ -14,7 +14,7 @@ Version 0.1, 11.01.2022
 
 The C programming language exists since 1972 and was one of the most often used programming languages in the past 50 years. It is imperative, statically typed and compiles into native CPU instructions. By design it allows low-level access to hardware and memory and thus various operating systems or IoT Devices are programmed with C.
 
-During the past years multi-core programming became more popular because new CPUs tend to have more cores than older ones. The image below shows that, starting from around 2005, the number of physical cores is constantly rising whereas the frequency-curve is flattening out.
+During the past years multi-core programming became more popular because new CPUs tend to have more cores than older ones. The image below shows that, starting from around 2005, the number of physical cores is constantly rising whereas the frequency-curve is flattening out. The below image was taken from https://livebook.manning.com/book/parallel-and-high-performance-computing/chapter-1/27
 
 image::parallel-trend.png[static, 400, align="center"]
 
