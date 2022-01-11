@@ -300,32 +300,38 @@ Furthermore the default parameters of both programs (Go and C with OpenMP) use q
 |4354ms
 |13800ms
 
+|*Blocked parallel*
+|*_6676ms_*
+|*_3530ms_*
+|*_5228ms_*
+|*_3770ms_*
+
+|*Prepared blocked parallel*
+|-
+|*_2090ms_*
+|-
+|*_2450ms_*
+
 |*Blocked*
 |32884ms
 |-
 |27462ms
 |-
 
-|*Blocked parallel*
-|6676ms
-|3530ms
-|5228ms
-|3770ms
-
 |*Prepared blocked*
 |-
 |16720ms
 |-
 |15940ms
-
-|*Prepared blocked parallel*
-|-
-|2090ms
-|-
-|2450ms
 |===
 
+While the vanilla algorithm in C is faster than the __golang__ implementation on the Windows machine the same is not true when running under Linux. It seems that the __golang__ compiler is better optimized towards numerical operations on Linux than it is on Windows. Other than that it may be possible that the difference in processor characteristics, such as cache size, lead to this results.
 
+The second row shows that the parallel vanilla algorithm in C with __OpenMP__ is faster than the __golang__ implementation. Again, the same test on Linux shows the opposite. One reason may be hyperthreading and the number of total CPU threads, which is higher on the Linux machine. As the __golang__ implementation spawns as many workers as there are rows or columns in the matrix it is possible the Linux machine profits from the bigger size of CPU threads.
+
+The third row presents the final benchmark which ultimatively shows that the C with __OpenMP__ implementation is faster on both Windows and Linux machines.
+
+The last rows depict performance of algorithm variants which are implemented either in C with __OpenMP__ or in __golang__. The results show that the prepared blocked matrix-matrix multiplication variant, where boundary indexes are precomputed, is the fastest.
 
 ////
 BENCHMARK RESULTS:
