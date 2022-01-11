@@ -1,0 +1,34 @@
+= Block-wise Matrix-matrix Multiplication in Golang
+John Lyons(c) 2022
+Version 0.1, 11.01.2022
+:sectnums:                               
+                                                
+:description: Block-wise Matrix-matrix Multiplication in Golang
+:keywords: matrix multiplication, Golang, go, concurrency, parallelism                             
+:imagesdir: ./figures                                                 
+
+== How to Build
+
+Install the following tools:
+
+* __Golang__ compiler
+
+Open a shell switch to the directory of this __Golang__ project and type:
+
+[source,bash]
+----
+go build main.go
+----
+
+== How to Test
+
+After building execute the following command in the root folder of the project:
+
+[source,bash]
+----
+go test -cover jolyons123/mm-benchmark/matrix
+----
+
+== How to Run
+
+By running the built executable in your shell it will perform a benchmark with default parameters. In order learn the parameters run the program with the `-h` argument which will display usage.
