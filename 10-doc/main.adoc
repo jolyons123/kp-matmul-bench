@@ -161,9 +161,9 @@ Furthermore when two sub-matrices have to be multiplied the regular matrix-matri
 
 The last important thing is to accumulate the existing values in the target matrix before entering the `k-loop`. This is the case because each result of a sub-matrix and sub-matrix multiplication has to be summed up at the end of the `k_-loop` and written to the corresponding target sub-matrix. Because the `k_-loop` (which is responsible for the "element-wise" sub-matrix and sub-matrix multiplication) is never ran in parallel, all sub-matrix and sub-matrix multiplications for a particular block-matrix row `i_` and block-matrix column `j_` are run sequantially. As such there is no race condition for accessing the value of `C->data[MIDX(i, j, C->cols)]` and writing to it after the regular matrix-matrix multiplication.
 
-Finally the implementation of OpenMP is straightforward once the initial configuration step is done. The `#pragma omp parallel for` directive tells the compiler to parallelize the following loop. The executed for-loop also blocks at the end until all of the workers have finished. In addition to that it is possible to define how many threads OpenMP should use. This can be done with the help of environment variables, compiler flags or function calls during runtime and is also relatively easy.
-
 As a part of this experiment the author decided to implement another version of the parallel blocked matrix-matrix multiplication algorithm where the `fminl` function is not used and the boundary indexes of each sub-matrix are pre-computed. This may be useful in scenarios where the dimensions for all upcoming matrix-matrix multiplications are known so only one step for preperation is necessary. The created custom matrix library contains functions for preparing, performing and cleaning up such an operation. Because showing this approach would run out of scope please refer to the implementation of the custom matrix library or its usage in the main file in this repository.
+
+Finally the implementation of OpenMP is straightforward once the initial configuration step is done. The `#pragma omp parallel for` directive tells the compiler to parallelize the following loop. The executed for-loop also blocks at the end until all of the workers have finished. OpenMP descides by itself wether or not to launch all available threads depending on the longeivity of the tasks. In addition to that it is possible to define how many threads OpenMP should use. This can be done with the help of environment variables, compiler flags or function calls during runtime and is also relatively easy.
 
 === Tests
 
@@ -187,15 +187,6 @@ TEST_CASE( "Matrix-matrix multiplication", "[matrix]" ) {
     memcpy(mat_A.data, a, sizeof(a));
     memcpy(mat_B.data, b, sizeof(b));
 
-    SECTION( "Parallel vanilla omp matrix-matrix multiplication" ) {
-        memset(mat_C.data, 0, sizeof(res));
-        matrix_vanilla_mul_omp(&mat_A, &mat_B, &mat_C);
-
-        for(int i = 0; i < n*n; i++){
-            REQUIRE( mat_C.data[i] == res[i] );
-        }
-    }
-
     SECTION( "Parallel prepared blocked omp matrix-matrix multiplication" ) {
         matrix_mult_operation mult_op;
         prepare_matrix_block_mult(&mat_A, &mat_B, &mat_C, block_size, block_size, &mult_op);
@@ -217,10 +208,62 @@ TEST_CASE( "Matrix-matrix multiplication", "[matrix]" ) {
     free_matrix(&mat_C);
 }
 ----
+
+The test coverage reaches 80.2%:
+
+image::c-coverage.png[static, width=95%, align="center"]
 // opt important
 // All tested algorithm modes (listing?)
 
-// Chap. Implementation in Go
+== Implementation in Go
+
+Because __golang__ comes with concurrency in mind it provides the ability to launch concurrent workload exist by default. For example any function can by launched as a __goroutine__ by providing the `go` keyword before calling the function. Therefore no further configuration nor additional libraries are needed in order to implement parallel logic.
+
+Given the C implementation of the blocked matrix-matrix multiplication algorithm the Golang implementation is very similar. Instead of passing pointers to custom defined structs, which hold information about the dimension and pointer to the data, a slice is passed. Golang slices are similar to the above custom defined struct. Instead of passing a single pointer to the array data a slice struct is passed which then further allows to iterate over the array because the dimension are known. Because the arrays are constructed in a one-dimensional fashion the row or column count (which is the same in this quadratic matrix example) is also passed in the variable `n`. Apart from that only minor syntax adjustments are needed. 
+
+The following code snippet shows a blocked matrix-matrix multiplication in Go:
+
+[source,golang,linenums]
+----
+func Mat_mul_block_par(A []float32, B []float32, C []float32, n int, block_size int) {
+	var wg sync.WaitGroup
+	for i_ := 0; i_ < n; i_ += block_size {
+		wg.Add(1)
+		go mat_mul_block_par_kernel(&wg, A, B, C, n, block_size, i_)
+	}
+	wg.Wait()
+}
+
+func mat_mul_block_par_kernel(wg *sync.WaitGroup, A []float32, B []float32, C []float32, n int, block_size int, i_ int) {
+	defer wg.Done()
+	for j_ := 0; j_ < n; j_ += block_size {
+		for k_ := 0; k_ < n; k_ += block_size {
+			for i := i_; i < minInt(i_+block_size, n); i++ {
+				for j := j_; j < minInt(j_+block_size, n); j++ {
+					acc := C[i*n+j]
+					for k := k_; k < minInt(k_+block_size, n); k++ {
+						acc += A[i*n+k] * B[k*n+j]
+					}
+					C[i*n+j] = acc
+				}
+			}
+		}
+	}
+}
+----
+
+In order to parallelize the most outer `i_-loop` the inner loops are encapsulated into a separate function. Each iteration of the `i_-loop` starts a separate __goroutine__ for the inner loops with the corresponding `i_` variable. The __go runtime__ is able to handle many __goroutines__ at once. Launching the same amount of threads or software-threads in C or java language performs worse. That is why the author chose to launch a number of __goroutines__ which is equal to the row count of the first matrix. Special care has to be taken when the row count is low and the column count is high. In such a situation it would be beneficial to launch the concurrency along the axis which has the most rows or columns.
+
+In order to synchronize the result the program needs to wait until all workers have finished. That is why the `sync.WaitGroup` is created which acts as a counter. Before launching each __goroutine__ the counter increases by one. Each __goroutine__ decreases the counter as soon as it ends by calling `wg.Done()` just before the function returns. In the above example this is done using the `defer` keyword.
+
+=== Tests
+
+The __golang__ programming language and compiler ship with industry standard testing capabilities. As a result implementing tests does not require additional libraries and can be done using the default toolkit. Test are written in a similar fashion as in the previous chapter and as such will not be discussed any further.
+
+The coverage of the matrix package reaches 89.8%:
+
+image::go-coverage.png[static,align="center"]
+
 // easy out of the box
 // dont need to control amount of goroutines because fast
 // wg.Sync needed 
@@ -228,6 +271,13 @@ TEST_CASE( "Matrix-matrix multiplication", "[matrix]" ) {
 // testing relatively easy and nice
 
 ==  Benchmark results
+
+For the benchmark two computers have been used:
+
+* PC: AMD Ryzen 5 2600X Six-Core Processor, 4050 Mhz, 6 Core(s), 12 Logical Processor(s)
+* Laptop: ...
+
+Furthermore the default parameters of both programs (Go and C with OpenMP) use quadtratic matrices with a row and column size of 3000. Even though the C implementation is capable of running benchmarks for non quadratic matrices and supports variable __row_split__ and __col_split__ (see the custom matrix library for details) the value from above was used for all matrices to make to results comparable. A block size of 20 was used as the option for the blocked matrix-matrix multiplication variants. Additonaly the C program includes the special variant with precomputed boundary indexes which was first mentioned in the third chapter.
 
 // Talk about default used block size, mat dimensions
 [cols=5*,options=header]
@@ -274,6 +324,8 @@ TEST_CASE( "Matrix-matrix multiplication", "[matrix]" ) {
 |-
 |2450ms
 |===
+
+
 
 ////
 BENCHMARK RESULTS:
