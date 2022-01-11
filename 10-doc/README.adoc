@@ -12,30 +12,27 @@ Version 0.1, 09.01.2022
 
 == Introduction
 
-The C programming language exists since 1972 and was one of the most often used programming languages in the past 50 years. It is imperative, statically typed and compiles into native cpu instructions. By design it allows low-level access to hardware and memory and thus various operating systems or IoT Devices are programmed with C.
+The C programming language exists since 1972 and was one of the most often used programming languages in the past 50 years. It is imperative, statically typed and compiles into native CPU instructions. By design it allows low-level access to hardware and memory and thus various operating systems or IoT Devices are programmed with C.
 
-During the past years multi-core programming became more popular because new cpus tend to have more cores than older ones. The image below shows that, starting from around 2005, the number of physcical cores is constantly rising whereas the increase in frequency stops.
+During the past years multi-core programming became more popular because new CPUs tend to have more cores than older ones. The image below shows that, starting from around 2005, the number of physical cores is constantly rising whereas the frequency-curve is flattening out.
 
 image::parallel-trend.png[static, 400, align="center"]
 
 As such programs extensively profit from concurrent programming. Because C is relatively old it does not come with concurrency in mind: One has to use the operating systems' features in order to implement parallel logic. While this is not bad by itself there is still the need of managing multiply threads, which can be annoying at times or can lead to mistakes.
 
-OpenMP is a library which was first released in 1997 for the Fortran programming language. The C version of OpenMP was released one year later. It comes in mind of parallelizing classic __loops__ where the amount of iterations is already known in the beginning. Implementing OpenMP is theoretically fairly easy but comes with many traps as we will see later.
+OpenMP is a library which was first released in 1997 for the Fortran programming language. The C version of OpenMP was released one year later. It comes in mind of parallelizing classic loops where the number of iterations is already known in the beginning. Implementing OpenMP is theoretically easy but comes with many traps as we will see later.
 
-On the other hand __Golang__ is a new language released in 2009 by Rob Pike et. al.. It aims to replace C/C++ in general purpose settings and as such brings some improvements and changes compared to C. For example it contains a garbage collector which frees unused memory similar to java. It comes with concurrency in mind by providing such called __goroutines__ which allow easy implementation of parallel programming paradigms. On the other hand Golang inherits some of the core concepts of C such as pointers.
+On the other hand, __Golang__ is a new language released in 2009 by Rob Pike et. al. It aims to replace C/{cpp} in general purpose settings and as such brings some improvements and changes compared to C. For example it contains a garbage collector which frees unused memory like java. It comes with concurrency in mind by providing such called __goroutines__ which allow easy implementation of parallel programming paradigms. Other than that, __Golang__ inherits some of the core concepts of C such as pointers.
 
 When it comes to comparing concurrent programming in both Golang and C the matrix-matrix multiplication is a perfect benchmark because it almost always allows for spawning many parallel threads or thread-like constructs.
 
-These days matrix multiplications are very common, for example in game rendering or machine learning scenarios. Speaking of machine learning neural models are constantly gaining more and more popularity. Those models have can have a large amount of parameters and as such training those models is computationally expensive. Training data are being loaded into matrices and those are multiplied with matrices representing the neural model's parameters across all layers. 
+These days matrix multiplications are very common, for example in game rendering or machine learning scenarios. Speaking of machine learning neural models are constantly gaining more and more popularity. Those models have can have a large number of parameters and as such training those models is computationally expensive. Training data are being loaded into matrices and those are multiplied with matrices representing the neural model's parameters across all layers. 
 
-Solutions for fast matrix-matrix multiplication already exist. For example there is Basic Linear Algebra Subprograms (BLAS) which can be used in C in order to make use of an efficient matrix-matrix multiplication. Other than that there is __nvidia cuda__ or __amd rocm__ which allow relocating concurrent workloads on gpus which are highly optimized for such tasks.
+Solutions for fast matrix-matrix multiplication already exist. For example, there is Basic Linear Algebra Subprograms (BLAS) which can be used in C in order to make use of an efficient matrix-matrix multiplication. Other than that, there is __Nvidia Cuda__ or __Amd Rocm__ which allow relocating concurrent workloads on GPUs which are highly optimized for such tasks.
 
-As such the proposed implementation does not primarily focus on outperforming those solutions. Instead the main goal is to compare the benefits gained by parallelizing a vanilla or blocked matrix-matrix multiplication and showing pros and cons in both C/OpenMP and Go.
+As such the proposed implementation does not primarily focus on outperforming those solutions. Instead, the main goal is to compare the benefits gained by parallelizing a vanilla or blocked matrix-matrix multiplication and showing pros and cons in both C/OpenMP and Go.
 
 Because both implementations would extensively make profit of easy optimizations the memory layout and some of the core ideas of matrix-matrix multiplication are explained in the following chapter.
-
-IMPORTANT NOTES: Iterate over i -> if row count low then useless
-Use accumulator for "k-loop" or too many memory access -> slow
 
 == Matrix-multiplication basics
 
@@ -43,21 +40,21 @@ The figure below depicts a basic matrix-matrix multiplication.
 
 image::mm.svg[static, width=90%, align="center"]
 
-Let us denote the left hand matrix as A, the right hand matrix as B and the result matrix as C. Then, in order to multiply both matrices together, the column count of A has to be equal to the row count of B. This is the case because the rows of A are multiplied with the columns of B element-wise, as the green arrow in the above picture shows. The result is stored in the destination matrix C using the row index of A and column index of B. 
+Let us denote the left-hand matrix as A, the right-hand matrix as B and the result matrix as C. Then, in order to multiply both matrices together, the column count of A has to be equal to the row count of B. This is the case because the rows of A are multiplied with the columns of B elementwise, as the green arrow in the above picture shows. The result is stored in the destination matrix C using the row index of A and column index of B. 
 
-Therefore each combination of a row of A and a column of B results in a unique index for matrix C. Because of that there is no race condition when constructing a correct loop order and one can make use of parallelization.
+Therefore, each combination of a row of A and a column of B results in a unique index for matrix C. Because of that there is no race condition when constructing a correct loop order and one can make use of parallelization.
 
-However care has to be taken when choosing the axis to parallelize. For example if matrix A had 1000000 rows and 2 columns it would make no sense to parallelize the column computations of A as most modern computers are capable to launch more than 2 real parallel threads. On the other hand special treatment is needed when launching more threads than physically possible. This is often realized by a software threads and a scheduler. We will later see that Golang is relatively efficient in comparison to C and OpenMP when launching many short-lived concurrent tasks.
+However, care has to be taken when choosing the axis to parallelize. For example, if matrix A had 1000000 rows and 2 columns it would make no sense to parallelize the column computations of A as most modern computers are capable to launch more than 2 real parallel threads. On the other hand, special treatment is needed when launching more threads than physically possible because the performance cost of schedulers is not to be neglected. We will later see that Golang is relatively efficient in comparison to C and OpenMP when launching many short-lived concurrent tasks.
 
-Other than that there exists the approach of partitioning matrices into blocks before performing multiplication. The figure below shows how this can look like.
+In addition to that, there exists the approach of partitioning matrices into blocks before performing multiplication. The figure below shows how this can look like.
 
 image::mm-block.svg[static, width=90%, align="center"]
 
-The matrix is split into chunks of desired __block size__ whenever possible. The constraints for dimensions of the resulting block-matrices are the same as the dimension constraints when performing a vanilla matrix-matrix multiplication. As far as the multiplication with rows of A and columns of B is concerned the rules stay the same. At the end of the matrix-matrix multiplication with a row of block-matrix A and a column of block-matrix B the results are added together. This time a matrix-matrix addition is performed to sum up the results into a result sub-matrix. It is advisable not to store the temporary results of sub-matrix multiplications but rather to add on top of the existing values in C. This will be later showed in the example code.
+The matrix is split into chunks of desired __block size__ whenever possible. The constraints for dimensions of the resulting block-matrices are the same as the dimension constraints when performing a vanilla matrix-matrix multiplication. As far as the multiplication with rows of A and columns of B is concerned the rules stay the same. At the end of the matrix-matrix multiplication with a row of block-matrix A and a column of block-matrix B the results are added together. This time a matrix-matrix addition is performed to sum up the results into a result sub-matrix. It is advisable not to store the temporary results of sub-matrix multiplications but rather to add on top of the existing values in C. This will be later shown in the example code.
 
 Summing it up the major differences are:
 
-* The element-wise multiplication of sub-matrices is now a classic matrix-matrix multiplication
+* The elementwise multiplication of sub-matrices is now a classic matrix-matrix multiplication
 * Each sub-matrix multiplication has to take existing values in target matrix into account in order to bypass the matrix-matrix addition requirement
 
 As far as performance is concerned there is a simple yet effective way to speed up the multiplication of matrices which requires to transpose matrix B. This way the memory layout of matrix B changes so that the access of a column of B is more cache friendly. For the sake of simplicity and because the project focuses on concurrency benchmarks rather than raw performance this optimization step was skipped.
@@ -67,7 +64,7 @@ The next chapter will discuss the C implementation which uses the OpenMP library
 == Implementation in C and OpenMP
 The C project is divided into the following components:
 
-* cmake configuration
+* __cmake__ configuration
 * custom matrix library
 * custom argument parser
 * main benchmark function
@@ -76,9 +73,9 @@ The C project is divided into the following components:
 Because configuring OpenMP is not so straightforward the steps required to enable OpenMP are explained in the following section.
 
 === Configuring OpenMP for C ===
-The cmake configuration allows for automatic makefile generation, build, testing and works with multiple compilers. Therefore it allows easy cross-plattform development and saves a lot of time during the build process. For this particular case the project was tested with the gcc compiler on Linux and the gcc MinGW version on Windows.
+The __cmake__ configuration allows for automatic __makefile__ generation, build, testing and works with multiple compilers. Therefore, it allows easy cross-platform development and saves a lot of time during the build process. In this case the project was tested with the __gcc__ compiler on Linux and the __gcc__ __MinGW__ version on Windows.
 
-In order to get OpenMP to work the compiler has to support it. In the case of the above mentioned compilers a flag during compile time is sufficient. The required header files and library can be easily linked against using cmake. The following code snippet shows how this is done:
+In order to get OpenMP to work the compiler has to support it. In the case of the above-mentioned compilers a flag during compile time is sufficient. The required header files and library can be easily linked against using __cmake__. The following code snippet shows how this is done:
 
 [source,cmake,linenums]
 ----
@@ -92,11 +89,11 @@ target_link_libraries(matrix PUBLIC OpenMP::OpenMP_CXX m)
 set_property(TARGET matrix PROPERTY C_STANDARD 99)
 ----
 
-The above cmake configuration links the target against the required OpenMP library and a math library. It further adds some compiler-specifig flags. The `-fopenmp` flag enables OpenMP support at runtime. This is crucial because even though the library is linked and the header files can be found at compile time, the program is only translated to use the concurrency features of OpenMP if the flag is given.
+The above __cmake__ configuration links the target against the required OpenMP library and a math library. It further adds some compiler-specific flags. The `-fopenmp` flag enables OpenMP support at runtime. This is crucial because even though the library is linked and the header files can be found at compile time, the program is only translated to use the concurrency features of OpenMP if the flag is given.
 
 Even worse is the fact that there is no warning or error at all when building a program which uses OpenMP directives but does not build with the `-fopenmp` flag. This is why the `-Wall -Wunknown-pragmas -Werror` options are important. By using those options the compiler throws an error at compile time when the source code is using OpenMP directives (which are #pragma's) but does not build with the `-fopenmp` flag.
 
-The last thing to consider is to define the C-standard because OpenMP directives differ accross different C-standards. For example the following code is compatible with the C99 standard but not with the C89 standard:
+The last thing to consider is to define the C-standard because OpenMP directives differ across different C-standards. For example, the following code is compatible with the C99 standard but not with the C89 standard:
 
 [source,c,linenums]
 ----
@@ -122,13 +119,13 @@ The equivalent code using the syntax which is supported by the C89-standard is:
 
 Again, in the case of wrong syntax, no warning is thrown when compiling without the `-Wunknown-pragmas` flag.
 
-The rest of the cmake files contain setup code which allows easy unit testing and code coverage generation using __gcovr__ and the __catch2__ library.
+The rest of the __cmake__ files contain setup code which allows easy unit testing and code coverage generation using __gcovr__ and the __catch2__ library.
 
 The next chapter will show how parallel matrix-matrix multiplication can be implemented with OpenMP.
 
 === Matrix-matrix multiplication with OpenMP
 
-As already shown in the second chapter parralelization of the vanilla or blocked matrix-matrix multiplication is possible because there is no race condition at runtime when correctly building the loop construct.
+As already shown in the second chapter parallelization of the vanilla or blocked matrix-matrix multiplication is possible because there is no race condition at runtime when correctly building the loop construct.
 
 The following code shows how the block-wise matrix-matrix multiplication is implemented in C and OpenMP:
 
@@ -157,19 +154,19 @@ for(int i_ = 0; i_ < A->rows; i_ += row_split){
 
 The basic idea is to iterate over the blocks of the block matrix the same way as iterating over a regular matrix. `row_split` and `col_split` define the size of one block and that is why those variables are used as step size in the outer three loops.
 
-Furthermore when two sub-matrices have to be multiplied the regular matrix-matrix multiplication loop can be used. The start indexes of `i, j, k` are given by the start indexes of the corresponding sub-matrix `i_, j_, k_`. The maximum value for each index `i, j, k` is given by the minimum of its corresponding sub-matrix plus the corresponding block size (`row_split` or `col_split`) and the total row or column length. The minimum has to be used because the last remaining sub-matrix in a particular axis may have a different dimension than the other ones. Consider a quadratic 5x5 matrix splitted into sub-matrices with a block size of 2 (`row_split` and `col_split` would be equal). As a consequence the last sub-matrix for each axis will have a dimension of [1,3] or [3,1] whereas all the other ones will have a dimension of [2,2].
+Furthermore, when two sub-matrices have to be multiplied the regular matrix-matrix multiplication loop can be used. The start indexes of `i, j, k` are given by the start indexes of the corresponding sub-matrix `i_, j_, k_`. The maximum value for each index `i, j, k` is given by the minimum of its corresponding sub-matrix plus the corresponding block size (`row_split` or `col_split`) and the total row or column length. The minimum has to be used because the last remaining sub-matrix in a particular axis may have a different dimension than the other ones. Consider a quadratic 5x5 matrix split into sub-matrices with a block size of 2 (`row_split` and `col_split` would be equal). As a consequence, the last sub-matrix for each axis will have a dimension of [1,3] or [3,1] whereas all the other ones will have a dimension of [2,2].
 
-The last important thing is to accumulate the existing values in the target matrix before entering the `k-loop`. This is the case because each result of a sub-matrix and sub-matrix multiplication has to be summed up at the end of the `k_-loop` and written to the corresponding target sub-matrix. Because the `k_-loop` (which is responsible for the "element-wise" sub-matrix and sub-matrix multiplication) is never ran in parallel, all sub-matrix and sub-matrix multiplications for a particular block-matrix row `i_` and block-matrix column `j_` are run sequantially. As such there is no race condition for accessing the value of `C->data[MIDX(i, j, C->cols)]` and writing to it after the regular matrix-matrix multiplication.
+The last important thing is to accumulate the existing values in the target matrix before entering the `k-loop`. This is the case because each result of a sub-matrix and sub-matrix multiplication has to be summed up at the end of the `k_-loop` and written to the corresponding target sub-matrix. Because the `k_-loop` (which is responsible for the elementwise sub-matrix and sub-matrix multiplication) is never ran in parallel, all sub-matrix and sub-matrix multiplications for a particular block-matrix row `i_` and block-matrix column `j_` are run sequentially. As such there is no race condition for accessing the value of `C->data[MIDX(i, j, C->cols)]` and writing to it after the regular matrix-matrix multiplication.
 
-As a part of this experiment the author decided to implement another version of the parallel blocked matrix-matrix multiplication algorithm where the `fminl` function is not used and the boundary indexes of each sub-matrix are pre-computed. This may be useful in scenarios where the dimensions for all upcoming matrix-matrix multiplications are known so only one step for preperation is necessary. The created custom matrix library contains functions for preparing, performing and cleaning up such an operation. Because showing this approach would run out of scope please refer to the implementation of the custom matrix library or its usage in the main file in this repository.
+As a part of this experiment the author decided to implement another version of the parallel blocked matrix-matrix multiplication algorithm where the `fminl` function is not used and the boundary indexes of each sub-matrix are pre-computed. This may be useful in scenarios where the dimensions for all upcoming matrix-matrix multiplications are known so only one step for preparation is necessary. The created custom matrix library contains functions for preparing, performing and cleaning up such an operation. Because showing this approach would run out of scope, please refer to the implementation of the custom matrix library or its usage in the main file in this repository.
 
-Finally the implementation of OpenMP is straightforward once the initial configuration step is done. The `#pragma omp parallel for` directive tells the compiler to parallelize the following loop. The executed for-loop also blocks at the end until all of the workers have finished. OpenMP descides by itself wether or not to launch all available threads depending on the longeivity of the tasks. In addition to that it is possible to define how many threads OpenMP should use. This can be done with the help of environment variables, compiler flags or function calls during runtime and is also relatively easy.
+Finally, the implementation of OpenMP is straightforward once the initial configuration step is done. The `#pragma omp parallel for` directive tells the compiler to parallelize the following loop. The executed for-loop also blocks at the end until all of the workers have finished. OpenMP decides by itself whether or not to launch all available threads depending on the longevity of the tasks. In addition to that it is possible to define how many threads OpenMP should use. This can be done with the help of environment variables, compiler flags or function calls during runtime and is also relatively easy.
 
 === Tests
 
-Testing is done using __cmake__ and the __catch2__ framework. __cache2__ is a C{plus}{plus} testing framework and allows for writing unit tests for both C and C{plus}{plus} by using special preprocessor macros.
+Testing is done using __cmake__ and the __catch2__ framework. __cache2__ is a {cpp} testing framework and allows for writing unit tests for both C and {cpp} by using special preprocessor macros.
 
-The following code snipped shows how all of the matrix-matrix multiplication functions are tested:
+The following code snipped shows how all the matrix-matrix multiplication functions are tested:
 
 [source,c,linenums]
 ----
@@ -217,9 +214,9 @@ image::c-coverage.png[static, width=95%, align="center"]
 
 == Implementation in Go
 
-Because __golang__ comes with concurrency in mind it provides the ability to launch concurrent workload exist by default. For example any function can by launched as a __goroutine__ by providing the `go` keyword before calling the function. Therefore no further configuration nor additional libraries are needed in order to implement parallel logic.
+Because __Golang__ comes with concurrency in mind it provides the ability to launch concurrent workload by default. For example, any function can by launched as a __goroutine__ by providing the `go` keyword before calling the function. Therefore, no further configuration nor additional libraries are needed in order to implement parallel logic.
 
-Given the C implementation of the blocked matrix-matrix multiplication algorithm the Golang implementation is very similar. Instead of passing pointers to custom defined structs, which hold information about the dimension and pointer to the data, a slice is passed. Golang slices are similar to the above custom defined struct. Instead of passing a single pointer to the array data a slice struct is passed which then further allows to iterate over the array because the dimension are known. Because the arrays are constructed in a one-dimensional fashion the row or column count (which is the same in this quadratic matrix example) is also passed in the variable `n`. Apart from that only minor syntax adjustments are needed. 
+Given the C implementation of the blocked matrix-matrix multiplication algorithm the Golang implementation is very similar. Instead of passing pointers to custom defined structs, which hold information about the dimension and pointer to the data, a slice is passed. Golang slices are similar to the above custom defined struct. Instead of passing a single pointer to the array data a slice struct is passed which then further allows to iterate over the array because the dimensions are known. Because the arrays are constructed in a one-dimensional fashion the row or column count (which is the same in this quadratic matrix example) is also passed in the variable `n`. Apart from that only minor syntax adjustments are needed. 
 
 The following code snippet shows a blocked matrix-matrix multiplication in Go:
 
@@ -252,13 +249,13 @@ func mat_mul_block_par_kernel(wg *sync.WaitGroup, A []float32, B []float32, C []
 }
 ----
 
-In order to parallelize the most outer `i_-loop` the inner loops are encapsulated into a separate function. Each iteration of the `i_-loop` starts a separate __goroutine__ for the inner loops with the corresponding `i_` variable. The __go runtime__ is able to handle many __goroutines__ at once. Launching the same amount of threads or software-threads in C or java language performs worse. That is why the author chose to launch a number of __goroutines__ which is equal to the row count of the first matrix. Special care has to be taken when the row count is low and the column count is high. In such a situation it would be beneficial to launch the concurrency along the axis which has the most rows or columns.
+In order to parallelize the most outer `i_-loop` the inner loops are encapsulated into a separate function. Each iteration of the `i_-loop` starts a separate __goroutine__ for the inner loops with the corresponding `i_` variable. The __go runtime__ is able to handle many __goroutines__ at once. Launching the same number of threads or software-threads in C or Java performs worse. That is why the author chose to launch a number of __goroutines__ which is equal to the row count of the first matrix. Special care has to be taken when the row count is low and the column count is high. In such a situation it would be beneficial to launch the concurrency along the axis which has the most rows or columns.
 
-In order to synchronize the result the program needs to wait until all workers have finished. That is why the `sync.WaitGroup` is created which acts as a counter. Before launching each __goroutine__ the counter increases by one. Each __goroutine__ decreases the counter as soon as it ends by calling `wg.Done()` just before the function returns. In the above example this is done using the `defer` keyword.
+In order to synchronize the result, the program needs to wait until all workers have finished. That is why the `sync.WaitGroup` is created which acts as a counter. Before launching each __goroutine__ the counter increases by one. Each __goroutine__ decreases the counter as soon as it ends by calling `wg.Done()` just before the function returns. In the above example this behaviour achieved by using the `defer` keyword.
 
 === Tests
 
-The __golang__ programming language and compiler ship with industry standard testing capabilities. As a result implementing tests does not require additional libraries and can be done using the default toolkit. Test are written in a similar fashion as in the previous chapter and as such will not be discussed any further.
+The __Golang__ programming language and compiler ship with industry standard testing capabilities. As a result, implementing tests does not require additional libraries and can be done using the default toolkit. Test are written in a similar fashion as in the previous chapter and as such will not be discussed any further.
 
 The coverage of the matrix package reaches 89.8%:
 
@@ -274,10 +271,10 @@ image::go-coverage.png[static,align="center"]
 
 For the benchmark two computers have been used:
 
-* PC: AMD Ryzen 5 2600X Six-Core Processor, 4050 Mhz, 6 Core(s), 12 Logical Processor(s)
-* Laptop: ...
+* PC: AMD Ryzen 5 2600X, 4050 Mhz, 6 Cores, 12 Logical Processors
+* Laptop: AMD Ryzen 7 5700U, 1800 Mhz, 8 Cores, 16 Logical Processors
 
-Furthermore the default parameters of both programs (Go and C with OpenMP) use quadtratic matrices with a row and column size of 3000. Even though the C implementation is capable of running benchmarks for non quadratic matrices and supports variable __row_split__ and __col_split__ (see the custom matrix library for details) the value from above was used for all matrices to make to results comparable. A block size of 20 was used as the option for the blocked matrix-matrix multiplication variants. Additonaly the C program includes the special variant with precomputed boundary indexes which was first mentioned in the third chapter.
+Furthermore, the default parameters of both programs (Go and C with OpenMP) use quadratic matrices with a row and column size of 3000. Even though the C implementation is capable of running benchmarks for non-quadratic matrices and supports variable __row_split__ and __col_split__ (see the custom matrix library for details) the value from above was used for all matrices to make the results comparable. A block size of 20 was used as the option for the blocked matrix-matrix multiplication variants. Additonally, the C program includes the special variant with precomputed boundary indexes which was first mentioned in the third chapter.
 
 // Talk about default used block size, mat dimensions
 [cols=5*,options=header]
@@ -325,13 +322,15 @@ Furthermore the default parameters of both programs (Go and C with OpenMP) use q
 |15940ms
 |===
 
-While the vanilla algorithm in C is faster than the __golang__ implementation on the Windows machine the same is not true when running under Linux. It seems that the __golang__ compiler is better optimized towards numerical operations on Linux than it is on Windows. Other than that it may be possible that the difference in processor characteristics, such as cache size, lead to this results.
+While the vanilla algorithm in C is faster than the __Golang__ implementation on the Windows machine the same is not true when running under Linux. It seems that the __Golang__ compiler is better optimized towards numerical operations on Linux than it is on Windows. Other than that, it may be possible that the difference in processor characteristics, such as cache size, lead to this results.
 
-The second row shows that the parallel vanilla algorithm in C with __OpenMP__ is faster than the __golang__ implementation. Again, the same test on Linux shows the opposite. One reason may be hyperthreading and the number of total CPU threads, which is higher on the Linux machine. As the __golang__ implementation spawns as many workers as there are rows or columns in the matrix it is possible the Linux machine profits from the bigger size of CPU threads.
+The second row shows that the parallel vanilla algorithm in C with __OpenMP__ is faster than the __Golang__ implementation. Again, the same test on Linux shows the opposite. One reason may be hyperthreading and the number of total CPU threads, which is higher on the Linux machine. As the __Golang__ implementation spawns as many workers as there are rows or columns in the matrix it is possible the Linux machine profits from the larger number of CPU threads.
 
-The third row presents the final benchmark which ultimatively shows that the C with __OpenMP__ implementation is faster on both Windows and Linux machines.
+The third row presents the final benchmark which ultimately shows that the C with __OpenMP__ implementation is faster on both Windows and Linux machines.
 
-The last rows depict performance of algorithm variants which are implemented either in C with __OpenMP__ or in __golang__. The results show that the prepared blocked matrix-matrix multiplication variant, where boundary indexes are precomputed, is the fastest.
+The last rows depict performance of algorithm variants which are implemented either in C with __OpenMP__ or in __Golang__. The results show that the prepared blocked matrix-matrix multiplication variant, where boundary indexes are precomputed, is the fastest.
+
+It is important to note that all the implementations do not transpose the right-hand matrix before performing multiplication. As already discussed in the second chapter this is an easy solution to further speed up the algorithms as the instructions would make extensive use of the CPU cache.
 
 ////
 BENCHMARK RESULTS:
